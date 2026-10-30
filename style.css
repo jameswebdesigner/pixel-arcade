@@ -1,0 +1,197 @@
+
+/* PIXEL ARCADE - SPACE THEME */
+/* Created by James! */
+
+body {
+    background-color: #0F174F;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    min-height: 100vh;
+}
+
+h1 {
+    color: #42d6ff;
+    font-size: 42px;
+    text-shadow: 0 0 20px #42d6ff;
+}
+
+h2 {
+    color: #ffbd4a;
+}
+
+p {
+    color: #b8d5ec;
+    font-size: 18px;
+}
+
+button {
+    background-color: #FC7026;
+    color: #091a37;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #ffbd4a;
+    transform: scale(1.05);
+}
+
+/* SPACE BACKGROUND */
+
+body {
+    background-image:
+        radial-gradient(5px 5px at 20px 30px, white 99%, transparent),
+        radial-gradient(2px 2px at 100px 80px, #42d6ff 99%, transparent),
+        radial-gradient(1px 1px at 180px 150px, white 99%, transparent),
+        radial-gradient(2px 2px at 250px 200px, #ffbd4a 99%, transparent),
+        radial-gradient(1px 1px at 320px 50px, white 99%, transparent);
+
+    background-size: 350px 250px;
+    background-repeat: repeat;
+    isolation: isolate;
+}
+
+/* ANIMATED SHOOTING STARS */
+
+.shooting-star {
+    position: fixed;
+    width: 120px;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #42d6ff,
+        white
+    );
+    border-radius: 50%;
+    box-shadow: 0 0 12px #42d6ff;
+    pointer-events: none;
+    z-index: -1;
+    animation: shoot 3s linear infinite;
+}
+
+.star1 {
+    top: 10%;
+    left: -150px;
+    animation-delay: 0s;
+}
+
+.star2 {
+    top: 30%;
+    left: -150px;
+    animation-delay: 2s;
+}
+
+.star3 {
+    top: 55%;
+    left: -150px;
+    animation-delay: 4s;
+}
+
+@keyframes shoot {
+    0% {
+        transform: translate(-150px, -150px)
+                   rotate(25deg);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    35% {
+        transform: translate(120vw, 60vh)
+                   rotate(25deg);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translate(120vw, 60vh)
+                   rotate(25deg);
+        opacity: 0;
+    }
+}
+
+/* GAME LIBRARY */
+
+#games {
+    padding: 50px 20px;
+}
+
+#games h2 {
+    color: #42d6ff;
+    font-size: 32px;
+}
+
+.game-library {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 25px;
+}
+
+.game-card {
+    background: #142c50;
+    border: 2px solid #28618c;
+    border-radius: 15px;
+    padding: 25px;
+    width: 230px;
+    transition: transform 0.3s;
+}
+
+.game-card:hover {
+    transform: translateY(-10px);
+    border-color: #42d6ff;
+}
+
+.game-icon {
+    font-size: 65px;
+}
+
+.game-card h3 {
+    color: white;
+}
+
+.game-card button:disabled {
+    background: #ffbd4a;
+    color: #091a37;
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+/* NAVIGATION LINKS */
+
+.back-link {
+    display: inline-block;
+    color: #42d6ff;
+    font-size: 18px;
+    text-decoration: none;
+    margin-top: 30px;
+    padding: 12px 20px;
+    border: 2px solid #42d6ff;
+    border-radius: 8px;
+}
+
+.back-link:hover {
+    background-color: #42d6ff;
+    color: #091a37;
+}
+
+/* PLATFORMER GAME SCREEN */
+
+#gameCanvas {
+    display: block;
+    margin: 20px auto;
+    max-width: 95%;
+    height: auto;
+    background: #071124;
+    border: 3px solid #42d6ff;
+    border-radius: 12px;
+    box-shadow: 0 0 25px #42d6ff55;
+}
