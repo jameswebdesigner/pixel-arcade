@@ -2,6 +2,10 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+ // SCROLLING CAMERA
+let cameraX = 0;
+let worldWidth = 800;
+
 // Our player
 const player = {
     x: 60,
@@ -153,10 +157,26 @@ if (coin.collected || coin.hidden) continue;
     }
 
     // Keep player inside the screen horizontally
-    player.x = Math.max(
+    
+ // Keep the player inside the WORLD, not just the screen
+player.x = Math.max(
+    0,
+    Math.min(worldWidth - player.width, player.x)
+);
+
+// Make the camera follow on scrolling levels
+if (currentLevel === 5) {
+    cameraX = Math.max(
         0,
-        Math.min(canvas.width - player.width, player.x)
+        Math.min(
+            worldWidth - canvas.width,
+            player.x - canvas.width / 2
+        )
     );
+} else {
+    cameraX = 0;
+}
+
 
     // Restart if player falls off the screen
     if (player.y > canvas.height) {
@@ -250,15 +270,19 @@ if (
 
     
 
+
 if (currentLevel === 1) {
     loadLevel2();
 } else if (currentLevel === 2) {
     loadLevel3();
 } else if (currentLevel === 3) {
     loadLevel4();
+} else if (currentLevel === 4) {
+    loadLevel5();
 } else {
     gameWon = true;
 }
+
 
 
 }
@@ -292,8 +316,14 @@ if (currentLevel === 3 && !gameWon) {
 }
 
 // Draw everything
+
 function draw() {
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+ // Move the game world opposite the camera
+ctx.save();
+ctx.translate(-cameraX, 0);
 
     // Draw platforms
     ctx.fillStyle = "#42d6ff";
@@ -386,6 +416,8 @@ ctx.lineTo(finishFlag.x + 45, finishFlag.y + 15);
 ctx.lineTo(finishFlag.x + 5, finishFlag.y + 30);
 ctx.closePath();
 ctx.fill();
+
+ctx.restore(); // Stop moving the camera
 
 // VICTORY SCREEN
 if (gameWon) {
@@ -624,6 +656,7 @@ ctx.fillText(
 
 ctx.textAlign = "left";
 
+ 
 }
 
 // RESPAWN AFTER HITTING SPIKES
@@ -645,7 +678,9 @@ function resetPlayer() {
 function loadLevel2() {
     currentLevel = 2;
     gameWon = false;
-
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
     // New platforms!
     platforms = [
         { x: 0, y: 410, width: 800, height: 40 },
@@ -684,7 +719,9 @@ function loadLevel2() {
 function loadLevel3() {
     currentLevel = 3;
     gameWon = false;
-
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
  // Put the alien at its starting position
 alien.x = 550;
 alien.y = 380;
@@ -709,7 +746,9 @@ alien.y = 380;
 function loadLevel4() {
     currentLevel = 4;
     gameWon = false;
-
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
     // One flat floor
     platforms = [
         { x: 0, y: 410, width: 800, height: 40 }
@@ -728,6 +767,58 @@ function loadLevel4() {
     corp.defeated = false;
 
     // Reset player
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+
+ // LEVEL 5 - BEYOND THE BORDER!
+function loadLevel5() {
+    currentLevel = 5;
+    gameWon = false;
+
+    // THREE screens wide!
+    worldWidth = 2400;
+    cameraX = 0;
+
+    // A long floor and new platforms
+    platforms = [
+        { x: 0, y: 410, width: 2400, height: 40 },
+        { x: 200, y: 330, width: 130, height: 20 },
+        { x: 480, y: 250, width: 130, height: 20 },
+        { x: 800, y: 330, width: 130, height: 20 },
+        { x: 1100, y: 250, width: 130, height: 20 },
+        { x: 1450, y: 330, width: 130, height: 20 },
+        { x: 1800, y: 250, width: 130, height: 20 },
+        { x: 2100, y: 330, width: 130, height: 20 }
+    ];
+
+    // Coins spread across the entire world
+    coins = [
+        { x: 265, y: 290, collected: false },
+        { x: 545, y: 210, collected: false },
+        { x: 865, y: 290, collected: false },
+        { x: 1165, y: 210, collected: false },
+        { x: 1515, y: 290, collected: false },
+        { x: 1865, y: 210, collected: false },
+        { x: 2165, y: 290, collected: false }
+    ];
+
+    // Spikes to jump over
+    spikes = [
+        { x: 380, y: 390, width: 40, height: 20 },
+        { x: 700, y: 390, width: 40, height: 20 },
+        { x: 1000, y: 390, width: 40, height: 20 },
+        { x: 1350, y: 390, width: 40, height: 20 },
+        { x: 1700, y: 390, width: 40, height: 20 },
+        { x: 2000, y: 390, width: 40, height: 20 }
+    ];
+
+    // Move the finish flag to the end of the world
+    finishFlag.x = 2330;
+
+    // Reset the player
     player.x = 60;
     player.y = 300;
     player.velocityY = 0;
