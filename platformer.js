@@ -359,11 +359,6 @@ if (coin.collected || coin.hidden) continue;
     ctx.stroke();
 }
 
-// Draw score
-ctx.fillStyle = "#ffffff";
-ctx.font = "bold 24px Arial";
-ctx.fillText("SCORE: " + score, 20, 35);
-
 // DRAW RED TRIANGULAR SPIKES
 for (const spike of spikes) {
     ctx.beginPath();
@@ -418,6 +413,13 @@ ctx.closePath();
 ctx.fill();
 
 ctx.restore(); // Stop moving the camera
+
+ // Draw score in a fixed position on the screen
+ctx.fillStyle = "#ffffff";
+ctx.font = "bold 24px Arial";
+ctx.textAlign = "left";
+ctx.fillText("SCORE: " + score, 20, 35);
+
 
 // VICTORY SCREEN
 if (gameWon) {
