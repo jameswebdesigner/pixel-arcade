@@ -23,7 +23,63 @@ let gamePaused = false;
 
 // COSMIC COSTUME SHOP
 let shopOpen = false;
+let goldenCostume = false;
+let goldenPurchased = localStorage.getItem("goldenPurchased") === "true";
+let shopCoins = 0;
+// Cosmic Costume Shop mouse controls
+canvas.addEventListener("click", (event) => {
+    // Full Reset button in the Pause Menu
+if (gamePaused && !shopOpen) {
+   
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+    const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
 
+    if (
+        mouseX >= canvas.width / 2 - 90 &&
+        mouseX <= canvas.width / 2 + 90 &&
+        mouseY >= canvas.height / 2 + 115 &&
+        mouseY <= canvas.height / 2 + 155
+    ) {
+        if (confirm("FULL RESET? This will erase your coins, costumes, and game progress!")) {
+            localStorage.removeItem("goldenPurchased");
+            location.reload();
+        }
+        return;
+    }
+}
+    if (!gamePaused || !shopOpen) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+    const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
+    // Classic Astronaut EQUIP button
+if (
+    mouseX >= 125 &&
+    mouseX <= 235 &&
+    mouseY >= 265 &&
+    mouseY <= 295
+) {
+    goldenCostume = false;
+    return;
+}
+    // Golden Astronaut button
+    if (
+       mouseX >= 365 &&
+mouseX <= 475 &&
+mouseY >= 265 &&
+mouseY <= 295
+    ) {
+        if (goldenPurchased) {
+    goldenCostume = !goldenCostume;
+} else if (shopCoins >= 25) {
+    shopCoins -= 25;
+    goldenPurchased = true;
+    localStorage.setItem("goldenPurchased", "true");
+    goldenCostume = true;
+}
+    }
+});
 // DIMENSIONAL PORTAL OPENING ANIMATION
 let portalOpeningStart = null;
 let portalTraveling = false;
@@ -56,6 +112,9 @@ let cutsceneStart = performance.now();
 
             if (secretInput === secretCode) {
                 developerMode = !developerMode;
+                if (developerMode) {
+    shopCoins += 1000;
+}
                 secretInput = "";
 
                 alert(
@@ -241,7 +300,8 @@ if (coin.collected || coin.hidden) continue;
 
     if (distanceX ** 2 + distanceY ** 2 < 15 ** 2) {
         coin.collected = true;
-        score += 50;
+        score += 1;
+        shopCoins += 1;
     }
 }
 
@@ -366,7 +426,8 @@ if (
 if (!portalTraveling) {
     portalTraveling = true;
     portalTravelStart = performance.now();
-    score += 100;
+    score += 10;
+    shopCoins += 10;
 }
 
     
@@ -743,11 +804,11 @@ const captainSquish =
     ctx.fillRect(1, 13, 30, 16);
 
     // Space suit
-    ctx.fillStyle = "#e8edf7";
+    ctx.fillStyle = goldenCostume ? "#FFD700" : "#e8edf7";
     ctx.fillRect(6, 13, 20, 14);
 
     // Arms
-    ctx.fillStyle = "#c2d2e5";
+    ctx.fillStyle = goldenCostume ? "#DAA520" : "#c2d2e5";
     ctx.fillRect(2, 15, 5, 12);
     ctx.fillRect(25, 15, 5, 12);
 
@@ -764,12 +825,12 @@ const captainSquish =
         : 0;
 
     // Animated boots
-    ctx.fillStyle = "#8096b5";
+    ctx.fillStyle = goldenCostume ? "#B8860B" : "#8096b5";
     ctx.fillRect(7 + step, 27, 8, 5);
     ctx.fillRect(17 - step, 27, 8, 5);
 
     // Helmet
-    ctx.fillStyle = "#f1f5ff";
+    ctx.fillStyle = goldenCostume ? "#FFD700" : "#f1f5ff";
     ctx.beginPath();
     ctx.arc(16, 12, 12, 0, Math.PI * 2);
     ctx.fill();
@@ -792,7 +853,7 @@ const captainSquish =
 
 
     // Suit control panel
-    ctx.fillStyle = "#42d6ff";
+    ctx.fillStyle = goldenCostume ? "#B8860B" : "#42d6ff";
     ctx.fillRect(13, 18, 6, 5);
 
     ctx.restore();
@@ -1241,11 +1302,11 @@ if (currentLevel === 4 && !corp.defeated) {
 let instructions = "";
 
 if (currentLevel === 1 || currentLevel === 2) {
-    instructions = "Collect all coins to unlock the flag! BUT! Don't hit a spike!";
+    instructions = "Collect all coins to open the portal! BUT! Don't hit a spike!";
 } else if (currentLevel === 3) {
-    instructions = "DODGE ZORP! Jump over him and reach the flag!";
+    instructions = "DODGE ZORP! Jump over him and reach the portal!";
 } else if (currentLevel === 4) {
-    instructions = "JUMP ON CORP! Collect his coin to unlock the flag!";
+    instructions = "JUMP ON CORP! Collect his coin to open the portal!";
 }
 
 // Draw instructions
@@ -1272,17 +1333,60 @@ if (shopOpen) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.textAlign = "center";
+// CLASSIC ASTRONAUT CARD
+ctx.fillStyle = "#1B2B4B";
+ctx.fillRect(80, 185, 200, 125);
 
+ctx.strokeStyle = "#42D6FF";
+ctx.lineWidth = 3;
+ctx.strokeRect(80, 185, 200, 125);
+
+ctx.fillStyle = "#FFFFFF";
+ctx.font = "bold 17px Arial";
+ctx.textAlign = "center";
+ctx.fillText("CLASSIC ASTRONAUT", 180, 225);
+
+ctx.fillStyle = "#42D6FF";
+ctx.font = "bold 18px Arial";
+ctx.fillText("FREE", 180, 260); 
+// CLASSIC ASTRONAUT EQUIP BUTTON
+ctx.fillStyle = "#42D6FF";
+ctx.fillRect(125, 265, 110, 30);
+
+ctx.fillStyle = "#14213D";
+ctx.font = "bold 18px Arial";
+ctx.textAlign = "center";
+ctx.fillText(goldenCostume ? "EQUIP" : "EQUIPPED", 180, 286);
+// GOLDEN ASTRONAUT CARD
+ctx.fillStyle = "#1B2B4B";
+ctx.fillRect(320, 185, 200, 125);
+
+ctx.strokeStyle = "#FFD700";
+ctx.lineWidth = 3;
+ctx.strokeRect(320, 185, 200, 125);
     ctx.fillStyle = "#42d6ff";
     ctx.font = "bold 36px Arial";
     ctx.fillText("COSMIC COSTUME SHOP", canvas.width / 2, 100);
 
     ctx.fillStyle = "#fcd94d";
     ctx.font = "bold 22px Arial";
-    ctx.fillText("COSTUMES COMING SOON!", canvas.width / 2, 220);
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("GOLDEN ASTRONAUT", 420, 225);
+ctx.fillText("25 COINS", 420, 245);
+ctx.fillStyle = "#FFD700";
+ctx.font = "bold 20px Arial";
+ctx.fillText("YOUR COINS: " + shopCoins, canvas.width / 2, 155);
+// Golden Astronaut BUY button
+ctx.fillStyle = "#FFD700";
+ctx.fillRect(365, 265, 110, 30);
 
+ctx.fillStyle = "#14213D";
+ctx.font = "bold 22px Arial";
+ctx.textAlign = "center";
+ctx.fillText(goldenPurchased ? (goldenCostume ? "EQUIPPED" : "EQUIP") : "BUY", 420, 286);
     ctx.fillStyle = "#ffffff";
     ctx.font = "18px Arial";
+ 
     ctx.fillText("PRESS C TO RETURN", canvas.width / 2, 350);
 
     ctx.restore();
@@ -1321,6 +1425,14 @@ ctx.fillText(
     canvas.width / 2,
     canvas.height / 2 + 85
 );
+// FULL RESET button
+ctx.fillStyle = "#C0392B";
+ctx.fillRect(canvas.width / 2 - 90, canvas.height / 2 + 115, 180, 40);
+
+ctx.fillStyle = "#FFFFFF";
+ctx.font = "bold 18px Arial";
+ctx.textAlign = "center";
+ctx.fillText("FULL RESET", canvas.width / 2, canvas.height / 2 + 142);
         ctx.restore();
     }
 
