@@ -9,10 +9,26 @@
 </head>
 <body>
 
-    <h1>🚀 PLATFORMER QUEST</h1>
+    <h1>🚀 captain pixel!</h1>
     <p>Arrow keys to move | Spacebar to jump</p>
 
     <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+<button id="fullscreenButton" type="button">
+    ⛶ FULL SCREEN
+</button>
+
+<script>
+document.getElementById("fullscreenButton").addEventListener("click", function () {
+    const game = document.getElementById("gameCanvas");
+
+    if (!document.fullscreenElement) {
+        game.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+});
+</script>
 
     <p>
         <a href="games.html" class="back-link">
