@@ -26,6 +26,22 @@ let shopOpen = false;
 let goldenCostume = false;
 let goldenPurchased = localStorage.getItem("goldenPurchased") === "true";
 let shopCoins = 0;
+
+// BORP - LEVEL 6 BOSS
+let borp = {
+    x: 550,
+    y: 310,
+    width: 90,
+    height: 100,
+    health: 4,
+defeated: false,
+speed: 1,
+deathStarted: 0,
+dying: false,
+lastHit: 0,
+flashTimer: 0
+
+};
 // Cosmic Costume Shop mouse controls
 canvas.addEventListener("click", (event) => {
     // Full Reset button in the Pause Menu
@@ -119,7 +135,7 @@ let cutsceneStart = performance.now();
 
                 alert(
                     developerMode
-                        ? "🚀 DEVELOPER MODE ON! Press 1-5 to skip levels."
+                        ? "🚀 DEVELOPER MODE ON! Press 1-6 to skip levels."
                         : "🔒 Developer mode OFF!"
                 );
             }
@@ -128,7 +144,7 @@ let cutsceneStart = performance.now();
         // Developer level shortcuts
         
         // SECRET LEVEL SKIP!
-        if (developerMode && /^[1-5]$/.test(key)) {
+        if (developerMode && /[1-6]$/.test(key)) {
             const level = Number(key);
 
             if (level === 1) {
@@ -141,6 +157,7 @@ let cutsceneStart = performance.now();
             if (level === 3) loadLevel3();
             if (level === 4) loadLevel4();
             if (level === 5) loadLevel5();
+            if (level === 6) loadLevel6();
 
             // Resume gameplay after skipping
             gamePaused = false;
@@ -442,6 +459,8 @@ if (currentLevel === 1) {
     loadLevel4();
 } else if (currentLevel === 4) {
     loadLevel5();
+} else if (currentLevel === 5) {
+    loadLevel6();
 } else {
     gameWon = true;
 }
@@ -454,7 +473,66 @@ if (currentLevel === 1) {
  // End portal collision check
 
 
+// BORP - LEVEL 6 BOSS CHASE
+if (currentLevel === 6 && !borp.defeated) {
+    if (borp.x > player.x + player.width) {
+        borp.x -= borp.speed;
+    } else if (borp.x + borp.width < player.x) {
+        borp.x += borp.speed;
+    }
+}
+// BORP - HEAD STOMP DETECTION
+if (currentLevel === 6 && !borp.defeated) {
+    if (borp.flashTimer > 0) {
+    borp.flashTimer--;
+}
+    const playerBottom = player.y + player.height;
 
+    const touchingBorp =
+        player.x + player.width > borp.x &&
+        player.x < borp.x + borp.width &&
+        playerBottom >= borp.y &&
+        playerBottom <= borp.y + 20;
+
+    if (
+        touchingBorp &&
+        player.velocityY > 0 &&
+        performance.now() - borp.lastHit > 1000
+    ) {
+        borp.health -= 1;
+        borp.flashTimer = 15;
+        borp.lastHit = performance.now();
+
+        // Bounce Captain Pixel upward!
+        player.velocityY = -12;
+
+      if (borp.health <= 0 && !borp.dying) {
+    // START BORP'S DEATH ANIMATION!
+    borp.dying = true;
+    borp.deathStarted = performance.now();
+}
+}
+    }
+// FINISH BORP'S DEATH ANIMATION
+if (currentLevel === 6 && borp.dying &&
+    performance.now() - borp.deathStarted >= 1500) {
+
+    borp.defeated = true;
+    borp.dying = false;
+    coins[0].hidden = false;
+}
+// BORP DAMAGES CAPTAIN PIXEL!
+if (currentLevel === 6 && !borp.defeated && !borp.dying) {
+    const touchingBody =
+        player.x + player.width > borp.x &&
+        player.x < borp.x + borp.width &&
+        player.y + player.height > borp.y + 20 &&
+        player.y < borp.y + borp.height;
+
+    if (touchingBody) {
+        resetPlayer();
+    }
+}
  // ALIEN CHASE BEHAVIOR
 if (currentLevel === 3 && !gameWon && !portalTraveling) {
 
@@ -691,7 +769,7 @@ ctx.translate(-cameraX, 0);
 
     // Restore normal transparency
     ctx.globalAlpha = 1;
-function drawCaptainPixel() {
+function drawCaptainPixel(preview = false, costume = goldenCostume) {
     // CAPTAIN PIXEL - ASTRONAUT!
     
 ctx.save();
@@ -726,8 +804,11 @@ if (portalTraveling) {
     ctx.translate(-centerX, -centerY);
 }
 
-if (facingRight) {
-    ctx.translate(player.x, player.y);
+if (preview || facingRight) {
+ctx.translate(
+ preview ? (costume ? 450 : 210) : player.x,
+    preview ? 230 : player.y
+);
     ctx.scale(player.width / 32, player.height / 32);
 } else {
     ctx.translate(player.x + player.width, player.y);
@@ -804,11 +885,11 @@ const captainSquish =
     ctx.fillRect(1, 13, 30, 16);
 
     // Space suit
-    ctx.fillStyle = goldenCostume ? "#FFD700" : "#e8edf7";
+    ctx.fillStyle = costume ? "#FFD700" : "#e8edf7";
     ctx.fillRect(6, 13, 20, 14);
 
     // Arms
-    ctx.fillStyle = goldenCostume ? "#DAA520" : "#c2d2e5";
+    ctx.fillStyle = costume ? "#DAA520" : "#c2d2e5";
     ctx.fillRect(2, 15, 5, 12);
     ctx.fillRect(25, 15, 5, 12);
 
@@ -825,12 +906,12 @@ const captainSquish =
         : 0;
 
     // Animated boots
-    ctx.fillStyle = goldenCostume ? "#B8860B" : "#8096b5";
+    ctx.fillStyle = costume ? "#B8860B" : "#8096b5";
     ctx.fillRect(7 + step, 27, 8, 5);
     ctx.fillRect(17 - step, 27, 8, 5);
 
     // Helmet
-    ctx.fillStyle = goldenCostume ? "#FFD700" : "#f1f5ff";
+    ctx.fillStyle = costume ? "#FFD700" : "#f1f5ff";
     ctx.beginPath();
     ctx.arc(16, 12, 12, 0, Math.PI * 2);
     ctx.fill();
@@ -853,7 +934,7 @@ const captainSquish =
 
 
     // Suit control panel
-    ctx.fillStyle = goldenCostume ? "#B8860B" : "#42d6ff";
+    ctx.fillStyle = costume ? "#B8860B" : "#42d6ff";
     ctx.fillRect(13, 18, 6, 5);
 
     ctx.restore();
@@ -873,6 +954,93 @@ if (coin.collected || coin.hidden) continue;
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.stroke();
+}
+// LEVEL 6 - GIANT GREEN BORP!
+if (currentLevel === 6 && !borp.defeated) {
+    ctx.save();
+    if (borp.dying) {
+    // BORP'S DRAMATIC DEATH SHAKE!
+const deathTime = performance.now() - borp.deathStarted;
+const shake = Math.sin(deathTime / 30) * 10;
+
+ctx.translate(shake, 0);
+// BORP'S SPIN OF DOOM!
+const spin = (deathTime / 1500) * Math.PI * 4;
+
+ctx.translate(
+    borp.x + borp.width / 2,
+    borp.y + borp.height / 2
+);
+
+ctx.rotate(spin);
+// BORP SHRINKS INTO NOTHING!
+const shrink = Math.max(0.01, 1 - deathTime / 1500);
+ctx.scale(shrink, shrink);
+ctx.translate(
+    -(borp.x + borp.width / 2),
+    -(borp.y + borp.height / 2)
+);
+} else {
+    // BORP'S HAPPY BEAN DANCE!
+const borpWobble = Math.sin(Date.now() / 350) * 0.08;
+const borpSquish = Math.sin(Date.now() / 180) * 0.12;
+
+ctx.translate(
+    borp.x + borp.width / 2,
+    borp.y + borp.height
+);
+
+ctx.rotate(borpWobble);
+ctx.scale(1 - borpSquish * 0.5, 1 + borpSquish);
+
+ctx.translate(
+    -(borp.x + borp.width / 2),
+    -(borp.y + borp.height)
+);  
+}
+    ctx.fillStyle = borp.flashTimer > 0 ? "#FF3333" : "#39FF14";
+    ctx.fillRect(borp.x, borp.y, borp.width, borp.height);
+    // Borp's giant alien eyes
+ctx.fillStyle = "white";
+ctx.beginPath();
+ctx.arc(borp.x + 25, borp.y + 25, 12, 0, Math.PI * 2);
+ctx.arc(borp.x + 65, borp.y + 25, 12, 0, Math.PI * 2);
+ctx.fill();
+const eyeDirectionX = Math.max(-5, Math.min(5, (player.x - borp.x) / 40));
+const eyeDirectionY = Math.max(-5, Math.min(5, (player.y - borp.y) / 40));
+// Black pupils
+ctx.fillStyle = "black";
+ctx.beginPath();
+ctx.arc(borp.x + 25 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
+ctx.arc(borp.x + 65 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
+ctx.fill();
+// Borp's grumpy mouth
+ctx.strokeStyle = "#145A32";
+ctx.lineWidth = 5;
+ctx.beginPath();
+ctx.moveTo(borp.x + 25, borp.y + 75);
+ctx.quadraticCurveTo(
+    borp.x + 45,
+    borp.y + 55,
+    borp.x + 65,
+    borp.y + 75
+);
+ctx.stroke();
+// BORP'S FOUR-POINT HEALTH BAR
+ctx.fillStyle = "#14213D";
+ctx.fillRect(borp.x, borp.y - 20, 90, 12);
+
+for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i < borp.health ? "#39FF14" : "#555555";
+    ctx.fillRect(borp.x + 3 + i * 22, borp.y - 17, 19, 6);
+}
+
+// White outline
+ctx.strokeStyle = "#FFFFFF";
+ctx.lineWidth = 2;
+ctx.strokeRect(borp.x, borp.y - 20, 90, 12);
+    ctx.restore();
+
 }
 
 // DRAW RED TRIANGULAR SPIKES
@@ -1336,6 +1504,8 @@ if (shopOpen) {
 // CLASSIC ASTRONAUT CARD
 ctx.fillStyle = "#1B2B4B";
 ctx.fillRect(80, 185, 200, 125);
+// Mini Classic Astronaut preview
+drawCaptainPixel(true, false);
 
 ctx.strokeStyle = "#42D6FF";
 ctx.lineWidth = 3;
@@ -1364,6 +1534,8 @@ ctx.fillRect(320, 185, 200, 125);
 ctx.strokeStyle = "#FFD700";
 ctx.lineWidth = 3;
 ctx.strokeRect(320, 185, 200, 125);
+// Golden Astronaut preview
+drawCaptainPixel(true, true);
     ctx.fillStyle = "#42d6ff";
     ctx.font = "bold 36px Arial";
     ctx.fillText("COSMIC COSTUME SHOP", canvas.width / 2, 100);
@@ -1616,7 +1788,39 @@ portalTravelStart = null;
     player.velocityY = 0;
     player.jumping = true;
 }
+// LEVEL 6 - BORP'S BOSS BATTLE!
+function loadLevel6() {
+    currentLevel = 6;
+    portalTraveling = false;
+portalTravelStart = null;
+portalOpeningStart = null;
+    gameWon = false;
+    worldWidth = 800;
+    cameraX = 0;
+    finishFlag.x = 730;
+finishFlag.y = 340;
+    // Borp's boss arena
+platforms = [
+    { x: 0, y: 410, width: 800, height: 40 },
+    { x: 150, y: 320, width: 130, height: 20 },
+    { x: 520, y: 320, width: 130, height: 20 }
+];
 
+spikes = [];
+coins = [
+    {
+        x: 585,
+        y: 260,
+        collected: false,
+        hidden: true
+    }
+];
+// Reset Captain Pixel for the boss battle
+player.x = 60;
+player.y = 300;
+player.velocityY = 0;
+player.jumping = true;
+}
 // Game loop
 
 function gameLoop() {
