@@ -1000,6 +1000,46 @@ ctx.translate(
 }
     ctx.fillStyle = borp.flashTimer > 0 ? "#FF3333" : "#39FF14";
     ctx.fillRect(borp.x, borp.y, borp.width, borp.height);
+    // BORP'S LITTLE BLACK LEGS!
+ctx.fillStyle = "#000000";
+
+// Left leg - walking animation!
+const walkSwing = borp.dying
+    ? 0
+    : Math.sin(Date.now() / 220) * 18;
+ctx.fillRect(
+    borp.x + 23 + walkSwing,
+    borp.y + borp.height,
+    18,
+    20
+);
+
+// Right leg - moves opposite the left!
+ctx.fillRect(
+    borp.x + 50 - walkSwing,
+    borp.y + borp.height,
+    18,
+    20
+);
+// BORP'S LITTLE ALIEN ANTENNAE!
+ctx.strokeStyle = "#3b7406";
+ctx.lineWidth = 5;
+ctx.lineCap = "round";
+
+ctx.beginPath();
+ctx.moveTo(borp.x + 25, borp.y + 5);
+ctx.lineTo(borp.x + 18, borp.y - 20);
+
+ctx.moveTo(borp.x + 65, borp.y + 5);
+ctx.lineTo(borp.x + 72, borp.y - 20);
+ctx.stroke();
+
+// Glowing antenna tips!
+ctx.fillStyle = "#11da4d";
+ctx.beginPath();
+ctx.arc(borp.x + 18, borp.y - 20, 7, 0, Math.PI * 2);
+ctx.arc(borp.x + 72, borp.y - 20, 7, 0, Math.PI * 2);
+ctx.fill();
     // Borp's giant alien eyes
 ctx.fillStyle = "white";
 ctx.beginPath();
@@ -1014,31 +1054,20 @@ ctx.beginPath();
 ctx.arc(borp.x + 25 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
 ctx.arc(borp.x + 65 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
 ctx.fill();
-// Borp's grumpy mouth
-ctx.strokeStyle = "#145A32";
-ctx.lineWidth = 5;
-ctx.beginPath();
-ctx.moveTo(borp.x + 25, borp.y + 75);
-ctx.quadraticCurveTo(
-    borp.x + 45,
-    borp.y + 55,
-    borp.x + 65,
-    borp.y + 75
-);
-ctx.stroke();
+
 // BORP'S FOUR-POINT HEALTH BAR
 ctx.fillStyle = "#14213D";
-ctx.fillRect(borp.x, borp.y - 20, 90, 12);
+ctx.fillRect(borp.x, borp.y - 45, 90, 12);
 
 for (let i = 0; i < 4; i++) {
     ctx.fillStyle = i < borp.health ? "#39FF14" : "#555555";
-    ctx.fillRect(borp.x + 3 + i * 22, borp.y - 17, 19, 6);
+    ctx.fillRect(borp.x + 3 + i * 22, borp.y - 42, 19, 6);
 }
 
 // White outline
 ctx.strokeStyle = "#FFFFFF";
 ctx.lineWidth = 2;
-ctx.strokeRect(borp.x, borp.y - 20, 90, 12);
+ctx.strokeRect(borp.x, borp.y - 45, 90, 12);
     ctx.restore();
 
 }
