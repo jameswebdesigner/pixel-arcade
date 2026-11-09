@@ -20,6 +20,28 @@ const player = {
 let facingRight = true;
 // Is the game paused?
 let gamePaused = false;
+// WORLD 2 ROCKET LANDING ANIMATION!
+// CAPTAIN PIXEL EXITS THE ROCKET!
+let captainExitingRocket = false;
+let captainExitStart = 0;
+
+// WORLD 2 - FROZEN PORTAL!
+let portalIceMelted = false;
+let portalFireBlasting = false;
+let portalFireStart = 0;
+
+// FINAL FIRE ORB POWER-UP ANIMATION!
+let firePowerMaxedStart = 0;
+let firePowerMaxedShown = false;
+
+let rocketLandingPlaying = false;
+let rocketLandingStart = 0;
+let worldEndingPlaying = false;
+let worldEndingStart = 0;
+// WORLD 1 VICTORY MUSIC!
+const worldVictoryMusic = new Audio("audio/world1-victory.mp3");
+worldVictoryMusic.volume = 0.6;
+worldVictoryMusic.loop = false;
 
 // COSMIC COSTUME SHOP
 let shopOpen = false;
@@ -135,7 +157,7 @@ let cutsceneStart = performance.now();
 
                 alert(
                     developerMode
-                        ? "🚀 DEVELOPER MODE ON! Press 1-6 to skip levels."
+                        ? "🚀 DEVELOPER MODE ON! Press 1-7 to skip levels."
                         : "🔒 Developer mode OFF!"
                 );
             }
@@ -144,7 +166,7 @@ let cutsceneStart = performance.now();
         // Developer level shortcuts
         
         // SECRET LEVEL SKIP!
-        if (developerMode && /[1-6]$/.test(key)) {
+        if (developerMode && /[1-7]$/.test(key)) {
             const level = Number(key);
 
             if (level === 1) {
@@ -158,6 +180,7 @@ let cutsceneStart = performance.now();
             if (level === 4) loadLevel4();
             if (level === 5) loadLevel5();
             if (level === 6) loadLevel6();
+            if (level === 7) loadLevel7();
 
             // Resume gameplay after skipping
             gamePaused = false;
@@ -333,7 +356,7 @@ player.x = Math.max(
 );
 
 // Make the camera follow on scrolling levels
-if (currentLevel === 5) {
+if (currentLevel === 5 || currentLevel >= 7) {
     cameraX = Math.max(
         0,
         Math.min(
@@ -461,10 +484,24 @@ if (currentLevel === 1) {
     loadLevel5();
 } else if (currentLevel === 5) {
     loadLevel6();
-} else {
+} else if (currentLevel === 6) {
+    // WORLD 1 COMPLETE - SCRAP YARD!
+    worldEndingPlaying = true;
+    worldEndingStart = performance.now();
+    // STOP SCRAP YARD MUSIC FOR THE VICTORY!
+document.getElementById("backgroundMusic").pause();
+    // PLAY WORLD 1 VICTORY MUSIC!
+worldVictoryMusic.currentTime = 0;
+worldVictoryMusic.play().catch(error => {
+    console.log("Victory music could not play:", error);
+});
     gameWon = true;
 }
-
+else if (currentLevel === 7) {
+    // WORLD 2 - FROZEN LANDING COMPLETE!
+    portalTraveling = false;
+    gameWon = true;
+}
 
 
 } // End portal travel timer
@@ -664,7 +701,12 @@ function draw() {
         planetX, planetY, 105
     );
 
-    glow.addColorStop(0, "rgba(155, 92, 255, 0.5)");
+    glow.addColorStop(
+    0,
+    currentLevel >= 7
+        ? "rgba(255, 100, 0, 0.85)"
+        : "rgba(155, 92, 255, 0.5)"
+);
     glow.addColorStop(1, "rgba(155, 92, 255, 0)");
 
     ctx.fillStyle = glow;
@@ -673,13 +715,42 @@ function draw() {
     ctx.fill();
 
     // Planet surface
-    ctx.fillStyle = "#8454d6";
+    // VOLCANIC PLANET ILLUMINATED BY LAVA!
+ctx.fillStyle = currentLevel >= 7
+    ? "#69302B"
+    : "#8454d6";
     ctx.beginPath();
     ctx.arc(planetX, planetY, planetRadius, 0, Math.PI * 2);
     ctx.fill();
+// WORLD 2 - GLOWING VOLCANIC LAVA!
+if (currentLevel >= 7) {
+    ctx.save();
 
+    // Keep the lava inside the planet!
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, planetRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Glowing lava river
+    ctx.strokeStyle = "#FF5500";
+    ctx.lineWidth = 8;
+    ctx.shadowColor = "#FF3300";
+    ctx.shadowBlur = 15;
+
+    ctx.beginPath();
+    ctx.moveTo(planetX - 50, planetY - 45);
+    ctx.lineTo(planetX - 25, planetY - 20);
+    ctx.lineTo(planetX - 35, planetY + 10);
+    ctx.lineTo(planetX + 5, planetY + 25);
+    ctx.lineTo(planetX + 30, planetY + 55);
+    ctx.stroke();
+
+    ctx.restore();
+}
     // Planet highlight
-    ctx.fillStyle = "rgba(210, 175, 255, 0.3)";
+    ctx.fillStyle = currentLevel >= 7
+    ? "rgba(255, 170, 50, 0.55)"
+    : "rgba(210, 175, 255, 0.3)";   
     ctx.beginPath();
     ctx.arc(planetX - 18, planetY - 20, 25, 0, Math.PI * 2);
     ctx.fill();
@@ -694,7 +765,40 @@ function draw() {
     ctx.beginPath();
     ctx.arc(planetX - 20, planetY + 30, 8, 0, Math.PI * 2);
     ctx.fill();
+// WORLD 2 - DISTANT FROZEN MOUNTAINS!
+if (currentLevel >= 7) {
+    ctx.save();
 
+    // Mountains move slowly as Captain Pixel explores
+    const mountainShift = cameraX * 0.45;
+
+    for (let i = -1; i < 6; i++) {
+        const x = i * 240 - mountainShift;
+        const peakY = 170 + (i % 3) * 35;
+
+        // Dark blue mountain
+        ctx.fillStyle = "#294D78";
+        ctx.beginPath();
+        ctx.moveTo(x, 410);
+        ctx.lineTo(x + 120, peakY);
+        ctx.lineTo(x + 240, 410);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow-covered peak
+        ctx.fillStyle = "#D8F8FF";
+        ctx.beginPath();
+        ctx.moveTo(x + 120, peakY);
+        ctx.lineTo(x + 85, peakY + 70);
+        ctx.lineTo(x + 110, peakY + 55);
+        ctx.lineTo(x + 130, peakY + 70);
+        ctx.lineTo(x + 155, peakY + 70);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
  // Move the game world opposite the camera
 
 ctx.save();
@@ -710,14 +814,91 @@ ctx.translate(-cameraX, 0);
         ctx.shadowBlur = 12;
 
         // Dark metallic platform
-        ctx.fillStyle = "#182b49";
+       // WORLD 2 GETS FROZEN ICE PLATFORMS!
+ctx.fillStyle = currentLevel >= 7
+    ? "#69DFFF"
+    : "#182b49";
         ctx.fillRect(
             platform.x,
             platform.y,
             platform.width,
             platform.height
         );
+        // WORLD 2 - ICE CRYSTALS GROWING FROM THE GROUND!
+if (currentLevel >= 7 && platform.y >= 400) {
+    ctx.save();
 
+    for (let i = 0; i < platform.width; i += 85) {
+        const x = platform.x + i + 40;
+        const y = platform.y;
+
+        ctx.fillStyle = "#B8F5FF";
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y);
+        ctx.lineTo(x - 5, y - 12);
+        ctx.lineTo(x, y - 25);
+        ctx.lineTo(x + 6, y - 10);
+        ctx.lineTo(x + 14, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Crystal shine
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 22);
+        ctx.lineTo(x, y - 5);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+        // WORLD 2 - JAGGED ICICLES UNDER PLATFORMS!
+if (currentLevel >= 7 && platform.y < 400) {
+    ctx.fillStyle = "#A8F4FF";
+
+    for (let i = 0; i < platform.width; i += 25) {
+        const spikeX = platform.x + i;
+        const spikeY = platform.y + platform.height;
+        const spikeLength = 15 + (i % 3) * 12;
+
+        ctx.beginPath();
+        ctx.moveTo(spikeX, spikeY);
+        ctx.lineTo(
+            Math.min(spikeX + 25, platform.x + platform.width),
+            spikeY
+        );
+        ctx.lineTo(spikeX + 12, spikeY + spikeLength);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+// WORLD 2 - FROSTY ICE SURFACE!
+if (currentLevel >= 7) {
+    ctx.save();
+
+    // Bright frozen top
+    ctx.fillStyle = "#E5FFFF";
+    ctx.fillRect(
+        platform.x,
+        platform.y,
+        platform.width,
+        5
+    );
+
+    // Soft icy glow
+    ctx.shadowColor = "#8AF5FF";
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = "#B8F8FF";
+    ctx.fillRect(
+        platform.x,
+        platform.y,
+        platform.width,
+        3
+    );
+
+    ctx.restore();
+}
         // Bright neon top edge
         ctx.fillStyle = "#42d6ff";
         ctx.fillRect(
@@ -803,7 +984,16 @@ if (portalTraveling) {
 
     ctx.translate(-centerX, -centerY);
 }
+// MOVE CAPTAIN PIXEL OUT OF THE ROCKET!
+if (captainExitingRocket && currentLevel === 7 && !preview) {
+    const exitTime = performance.now() - captainExitStart;
+    const progress = Math.min(exitTime / 1500, 1);
 
+    const exitX = 60 + progress * 65;
+    const exitY = 350 + progress * 20;
+
+    ctx.translate(exitX - player.x, exitY - player.y);
+}
 if (preview || facingRight) {
 ctx.translate(
  preview ? (costume ? 450 : 210) : player.x,
@@ -940,20 +1130,68 @@ const captainSquish =
     ctx.restore();
 } // End drawCaptainPixel
     // Draw Captain Pixel normally
-if (!portalTraveling) {
+if (!portalTraveling && !rocketLandingPlaying && !captainExitingRocket) {
     drawCaptainPixel();
+}
+
+// CAPTAIN PIXEL CLIMBS OUT OF THE ROCKET!
+if (captainExitingRocket && currentLevel === 7) {
+    const exitTime = performance.now() - captainExitStart;
+    const progress = Math.min(exitTime / 1500, 1);
+
+    ctx.save();
+
+    // Start at the rocket door, then move right and down
+    const exitX = 60 + progress * 65;
+    const exitY = 350 + progress * 20;
+
+    drawCaptainPixel();
+
+    ctx.restore();
+}
+// KEEP THE ROCKET PARKED IN WORLD 2!
+if (currentLevel === 7 && !rocketLandingPlaying) {
+    drawParkedRocket();
 }
 // Draw coins
 for (const coin of coins) {
 if (coin.collected || coin.hidden) continue;
-
+// FIRE ORB GLOW FOR WORLD 2!
+if (currentLevel >= 7) {
+    ctx.shadowColor = "#FF4500";
+    ctx.shadowBlur = 20;
+}
     ctx.beginPath();
     ctx.arc(coin.x, coin.y, 15, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffdd00";
+    ctx.fillStyle = currentLevel >= 7 ? "#FF6600" : "#ffdd00";
     ctx.fill();
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 2;
     ctx.stroke();
+    // ANIMATED FIRE ORB FLAME!
+if (currentLevel >= 7) {
+    const flicker = Math.sin(performance.now() / 120 + coin.x) * 4;
+
+    ctx.fillStyle = "#FF3300";
+    ctx.beginPath();
+    ctx.moveTo(coin.x - 10, coin.y - 5);
+    ctx.quadraticCurveTo(
+        coin.x - 5,
+        coin.y - 25 - flicker,
+        coin.x + 2,
+        coin.y - 12
+    );
+    ctx.quadraticCurveTo(
+        coin.x + 14,
+        coin.y - 30 + flicker,
+        coin.x + 10,
+        coin.y - 5
+    );
+    ctx.closePath();
+    ctx.fill();
+}
+    // RESET GLOW SO OTHER OBJECTS DON'T GLOW!
+ctx.shadowBlur = 0;
 }
 // LEVEL 6 - GIANT GREEN BORP!
 if (currentLevel === 6 && !borp.defeated) {
@@ -1115,9 +1353,11 @@ if (allCoinsCollected && portalOpeningStart === null) {
 }
 
 // How far has the portal opened? 0 = closed, 1 = fully open
-const portalProgress = allCoinsCollected
-    ? Math.min((performance.now() - portalOpeningStart) / 1500, 1)
-    : 0;
+const portalProgress = currentLevel >= 7
+    ? 1
+    : allCoinsCollected
+        ? Math.min((performance.now() - portalOpeningStart) / 1500, 1)
+        : 0;
     ctx.save();
 
     if (!allCoinsCollected) {
@@ -1222,7 +1462,192 @@ if (portalTraveling) {
     drawCaptainPixel();
 }
 ctx.restore(); // Stop moving the camera
+// WORLD 2 - GIANT ICE CRYSTAL TRAPPING THE PORTAL!
+if (currentLevel === 7 && !portalIceMelted) {
+    ctx.save();
 
+    const iceCenterX = finishFlag.x + 5 - cameraX;
+    const iceCenterY = finishFlag.y + 35;
+    // ICE SHRINKS WHILE THE FIRE BLAST HITS!
+const meltProgress = portalFireBlasting
+    ? Math.min((performance.now() - portalFireStart) / 800, 1)
+    : 0;
+
+ctx.translate(iceCenterX, iceCenterY + 45);
+ctx.scale(1 - meltProgress, 1 - meltProgress);
+ctx.translate(-iceCenterX, -(iceCenterY + 45));
+
+    // Glowing frozen crystal
+    ctx.shadowColor = "#65E9FF";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "rgba(100, 220, 255, 0.75)";
+
+    ctx.beginPath();
+    ctx.moveTo(iceCenterX - 45, iceCenterY + 45);
+    ctx.lineTo(iceCenterX - 50, iceCenterY - 20);
+    ctx.lineTo(iceCenterX - 30, iceCenterY - 55);
+    ctx.lineTo(iceCenterX - 10, iceCenterY - 40);
+    ctx.lineTo(iceCenterX + 5, iceCenterY - 75);
+    ctx.lineTo(iceCenterX + 25, iceCenterY - 45);
+    ctx.lineTo(iceCenterX + 45, iceCenterY - 55);
+    ctx.lineTo(iceCenterX + 50, iceCenterY + 45);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "#E5FFFF";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.restore();
+}
+// WORLD 2 - CAPTAIN PIXEL'S FIRE BLAST!
+if (currentLevel === 7 && portalFireBlasting) {
+    const fireTime = performance.now() - portalFireStart;
+
+    if (fireTime < 800) {
+        ctx.save();
+
+        // Captain Pixel shoots toward the portal!
+        const startX = player.x + player.width / 2 - cameraX;
+        const startY = player.y + player.height / 2;
+        const endX = finishFlag.x + 5 - cameraX;
+        const endY = finishFlag.y + 35;
+
+        // Flickering outer flames
+        ctx.strokeStyle = "#FF5500";
+        ctx.lineWidth = 25 + Math.random() * 10;
+        ctx.shadowColor = "#FF3300";
+        ctx.shadowBlur = 25;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // Super-hot yellow center
+        ctx.strokeStyle = "#FFFF44";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        ctx.restore();
+    } else {
+    portalFireBlasting = false;
+    portalIceMelted = true;
+}
+}
+// WORLD 2 - FROZEN PORTAL INSTRUCTIONS!
+if (currentLevel === 7 && !portalIceMelted) {
+    const distanceToPortal = Math.abs(
+        (player.x + player.width / 2) - (finishFlag.x + 5)
+    );
+
+    if (distanceToPortal < 150) {
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.font = "bold 18px Arial";
+        ctx.shadowColor = "#FF6600";
+        ctx.shadowBlur = 12;
+
+        if (coins.every(coin => coin.collected)) {
+            ctx.fillStyle = "#FFCC44";
+            ctx.fillText("🔥 PRESS F TO MELT THE ICE!", canvas.width / 2, 90);
+        } else {
+            ctx.fillStyle = "#A8F4FF";
+            ctx.fillText("COLLECT ALL FIRE ORBS!", canvas.width / 2, 90);
+        }
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - FIRE ORB TUTORIAL!
+if (currentLevel === 7 && !rocketLandingPlaying) {
+    const timeSinceLanding = performance.now() - captainExitStart;
+
+    if (timeSinceLanding < 5000 && timeSinceLanding >= 0) {
+        ctx.save();
+
+        ctx.textAlign = "center";
+        ctx.font = "bold 16px Arial";
+        ctx.fillStyle = "#FFCC44";
+        ctx.shadowColor = "#FF6600";
+        ctx.shadowBlur = 10;
+
+        ctx.fillText(
+            "COLLECT ALL FIRE ORBS TO MELT THE PORTAL ICE!",
+            canvas.width / 2,
+            115
+        );
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - DETECT MAXIMUM FIRE POWER!
+if (
+    currentLevel === 7 &&
+    !firePowerMaxedShown &&
+    coins.length > 0 &&
+    coins.every(coin => coin.collected)
+) {
+    firePowerMaxedShown = true;
+    firePowerMaxedStart = performance.now();
+}
+// WORLD 2 - FIRE POWER MAXED CELEBRATION!
+if (currentLevel === 7 && firePowerMaxedShown) {
+    const powerTime = performance.now() - firePowerMaxedStart;
+
+    if (powerTime < 2500) {
+        ctx.save();
+
+        // Quick orange flash!
+        if (powerTime < 500) {
+            ctx.fillStyle = `rgba(255, 100, 0, ${0.3 * (1 - powerTime / 500)})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Pulsing victory message!
+        const pulse = 1 + Math.sin(powerTime * 0.012) * 0.08;
+
+        ctx.translate(canvas.width / 2, 145);
+        ctx.scale(pulse, pulse);
+
+        ctx.textAlign = "center";
+        ctx.font = "bold 22px Arial";
+        ctx.fillStyle = "#FFD84D";
+        ctx.shadowColor = "#FF5500";
+        ctx.shadowBlur = 20;
+
+        ctx.fillText("FIRE POWER MAXED!", 0, 0);
+
+        ctx.font = "bold 15px Arial";
+        ctx.fillText("FIND THE FROZEN PORTAL!", 0, 28);
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - FIRE POWER COUNTER!
+if (currentLevel === 7) {
+    const collectedFire = coins.filter(coin => coin.collected).length;
+    const totalFire = coins.length;
+
+    ctx.save();
+
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#FFAA33";
+    ctx.shadowColor = "#FF5500";
+    ctx.shadowBlur = 8;
+
+    ctx.fillText(
+        "FIRE POWER: " + collectedFire + "/" + totalFire,
+        20,
+        65
+    );
+
+    ctx.restore();
+}
  // Draw score in a fixed position on the screen
 ctx.fillStyle = "#ffffff";
 ctx.font = "bold 24px Arial";
@@ -1239,7 +1664,7 @@ if (gameWon) {
     ctx.font = "bold 48px Arial";
     ctx.textAlign = "center";
     ctx.fillText(
-        "🏆 LEVEL COMPLETE!",
+     currentLevel === 7 ? "❄️ FROZEN LANDING COMPLETE!" : "🏆 LEVEL COMPLETE!",
         canvas.width / 2,
         190
     );
@@ -1850,9 +2275,509 @@ player.y = 300;
 player.velocityY = 0;
 player.jumping = true;
 }
-// Game loop
+// WORLD 2 - LEVEL 1: THE FROZEN LANDING!
+function loadLevel7() {
+    currentLevel = 7;
 
+    // RESET FIRE POWER CELEBRATION!
+firePowerMaxedShown = false;
+firePowerMaxedStart = 0;
+
+// RESET THE FROZEN PORTAL!
+portalIceMelted = false;
+// FIRE BLAST IS READY ONLY AFTER ALL FIRE ORBS!
+portalFireBlasting = false;
+
+portalFireBlasting = false;
+portalFireStart = 0;
+
+    // START THE WORLD 2 ROCKET LANDING!
+rocketLandingPlaying = true;
+rocketLandingStart = performance.now();
+
+    gameWon = false;
+    portalTraveling = false;
+    portalTravelStart = null;
+    portalOpeningStart = null;
+
+    // A HUGE scrolling frozen world!
+    worldWidth = 3200;
+    cameraX = 0;
+// CLEAR OLD SPIKES FOR WORLD 2!
+spikes = [];
+    // Frozen portal at the far end
+    finishFlag.x = 3050;
+    finishFlag.y = 340;
+
+    // Frozen ground and floating ice platforms
+    platforms = [
+    // Frozen ground
+    { x: 0, y: 410, width: 3200, height: 40 },
+
+    // Frozen Landing obstacle course
+    { x: 250, y: 350, width: 150, height: 20 },
+    { x: 550, y: 310, width: 150, height: 20 },
+    { x: 850, y: 355, width: 160, height: 20 },
+    { x: 1150, y: 325, width: 150, height: 20 },
+    { x: 1450, y: 290, width: 160, height: 20 },
+    { x: 1750, y: 350, width: 150, height: 20 },
+    { x: 2050, y: 315, width: 160, height: 20 },
+    { x: 2350, y: 345, width: 150, height: 20 },
+    { x: 2650, y: 300, width: 160, height: 20 }
+    
+];
+
+    // Fire Orbs! Each one is also a shop coin.
+    coins = [
+        { x: 350, y: 280, collected: false },
+        { x: 720, y: 240, collected: false },
+        { x: 1110, y: 290, collected: false },
+        { x: 1570, y: 230, collected: false },
+        { x: 2070, y: 270, collected: false },
+        { x: 2620, y: 220, collected: false }
+    ];
+
+    // Captain Pixel lands on the frozen planet!
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+// Game loop
+// ROCKET PARKED ON THE FROZEN PLANET!
+function drawParkedRocket() {
+    const x = 60 - cameraX;
+    const y = 340;
+
+    // Red wings
+    ctx.fillStyle = "#FF3333";
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y + 45);
+    ctx.lineTo(x - 42, y + 85);
+    ctx.lineTo(x - 15, y + 70);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x + 15, y + 45);
+    ctx.lineTo(x + 42, y + 85);
+    ctx.lineTo(x + 15, y + 70);
+    ctx.fill();
+
+    // Silver rocket
+    ctx.fillStyle = "#C0D8E8";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 25, y + 70);
+    ctx.lineTo(x + 25, y + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Blue cockpit
+    ctx.fillStyle = "#00D9FF";
+    ctx.beginPath();
+    ctx.arc(x, y + 38, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // ROCKET DOOR OPENS FOR CAPTAIN PIXEL!
+if (captainExitingRocket) {
+    ctx.fillStyle = "#10243D";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 55, 9, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Open silver door swings to the right
+    ctx.fillStyle = "#A8C5D8";
+    ctx.fillRect(x + 9, y + 43, 7, 25);
+}
+}
 function gameLoop() {
+    // FINISH CAPTAIN PIXEL'S ROCKET EXIT!
+if (captainExitingRocket &&
+    performance.now() - captainExitStart >= 1500) {
+    captainExitingRocket = false;
+}
+
+    // WORLD 2 ROCKET LANDING!
+if (rocketLandingPlaying) {
+    const landingTime = performance.now() - rocketLandingStart;
+
+    // Rocket flies down toward the frozen ground!
+    const rocketY = Math.min(-100 + landingTime * 0.15, 340);
+    // LAND AT CAPTAIN PIXEL'S STARTING POSITION!
+const rocketX = player.x + player.width / 2 - cameraX;
+
+    // SHOW THE ACTUAL FROZEN LEVEL BEHIND THE ROCKET!
+draw();
+// GIANT MELTING ICE BLOCK!
+const iceX = rocketX - 35;
+const iceBottom = 410;
+
+// Ice melts as the rocket gets closer!
+const meltProgress = Math.max(0, Math.min(1, (rocketY - 100) / 240));
+const iceHeight = 65 * (1 - meltProgress);
+
+if (iceHeight > 0) {
+    ctx.save();
+
+    // Glowing ice
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#79E8FF";
+    // JAGGED ALIEN ICE CRYSTAL!
+ctx.beginPath();
+ctx.moveTo(iceX, iceBottom);
+ctx.lineTo(iceX + 5, iceBottom - iceHeight * 0.7);
+ctx.lineTo(iceX + 15, iceBottom - iceHeight * 0.55);
+ctx.lineTo(iceX + 25, iceBottom - iceHeight);
+ctx.lineTo(iceX + 38, iceBottom - iceHeight * 0.65);
+ctx.lineTo(iceX + 52, iceBottom - iceHeight * 0.9);
+ctx.lineTo(iceX + 65, iceBottom - iceHeight * 0.6);
+ctx.lineTo(iceX + 70, iceBottom);
+ctx.closePath();
+ctx.fill();
+    // Frozen shine
+    ctx.fillStyle = "#D9FFFF";
+    ctx.fillRect(iceX + 8, iceBottom - iceHeight + 5, 12, iceHeight * 0.6);
+
+    ctx.restore();
+}
+// STEAM RISING FROM MELTING ICE!
+if (meltProgress > 0 && meltProgress < 1) {
+    ctx.save();
+
+    for (let i = 0; i < 8; i++) {
+        const steamX = rocketX - 30 + i * 9;
+       // STEAM FLOATS UP INTO THE SKY!
+const rise = (landingTime * 0.06 + i * 18) % 180;
+const steamY = 405 - rise;
+
+        ctx.fillStyle = "rgba(210, 245, 255, 0.45)";
+        ctx.beginPath();
+        ctx.arc(steamX, steamY, 7 + meltProgress * 8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+    // Rocket body
+    ctx.fillStyle = "#C0D8E8";
+    ctx.beginPath();
+    ctx.moveTo(rocketX, rocketY);
+ctx.lineTo(rocketX - 25, rocketY + 70);
+ctx.lineTo(rocketX + 25, rocketY + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glowing cockpit
+    ctx.fillStyle = "#00D9FF";
+    ctx.beginPath();
+    ctx.arc(rocketX, rocketY + 38, 10, 0, Math.PI * 2);
+    ctx.fill();
+// RED ROCKET WINGS!
+ctx.fillStyle = "#FF3333";
+
+ctx.beginPath();
+ctx.moveTo(rocketX - 15, rocketY + 45);
+ctx.lineTo(rocketX - 42, rocketY + 85);
+ctx.lineTo(rocketX - 15, rocketY + 70);
+ctx.fill();
+
+ctx.beginPath();
+ctx.moveTo(rocketX + 15, rocketY + 45);
+ctx.lineTo(rocketX + 42, rocketY + 85);
+ctx.lineTo(rocketX + 15, rocketY + 70);
+ctx.fill();
+
+// BLAZING ROCKET ENGINE!
+if (rocketY < 340) {
+    const flicker = Math.random() * 15;
+
+    // Orange outer flame
+    ctx.fillStyle = "#FF6600";
+    ctx.beginPath();
+    ctx.moveTo(rocketX - 15, rocketY + 70);
+    ctx.lineTo(rocketX, rocketY + 115 + flicker);
+    ctx.lineTo(rocketX + 15, rocketY + 70);
+    ctx.fill();
+
+    // Yellow inner flame
+    ctx.fillStyle = "#FFFF00";
+    ctx.beginPath();
+    ctx.moveTo(rocketX - 7, rocketY + 70);
+    ctx.lineTo(rocketX, rocketY + 95 + flicker);
+    ctx.lineTo(rocketX + 7, rocketY + 70);
+    ctx.fill();
+}
+// FINISH THE ROCKET LANDING!
+if (landingTime >= 4000) {
+    rocketLandingPlaying = false;
+
+    // START CAPTAIN PIXEL'S ROCKET EXIT!
+    captainExitingRocket = true;
+    captainExitStart = performance.now();
+
+    // Keep Captain Pixel beside the rocket for now
+    player.x = 125;
+    player.y = 370;
+    player.velocityY = 0;
+    player.jumping = false;
+}
+    requestAnimationFrame(gameLoop);
+    return;
+}
+    if (worldEndingPlaying) {
+        // AFTER THE ROCKET CUTSCENE, LAND ON WORLD 2!
+if (performance.now() - worldEndingStart >= 12000) {
+    worldEndingPlaying = false;
+    worldVictoryMusic.pause();
+    loadLevel7();
+}
+        const endingTime = performance.now() - worldEndingStart;
+    ctx.fillStyle = "#080D24";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+// TWINKLING SPACE STARS!
+for (let i = 0; i < 45; i++) {
+    const starX = (i * 137 + 29) % canvas.width;
+    const starY = (i * 83 + 47) % canvas.height;
+
+    const twinkle = 0.4 + Math.sin(
+        performance.now() / 350 + i
+    ) * 0.3;
+
+    ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+    ctx.beginPath();
+    ctx.arc(starX, starY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+}
+if (endingTime < 3000) {
+ctx.fillStyle = "#39FF14";
+ctx.font = "bold 36px Arial";
+ctx.textAlign = "center";
+ctx.fillText("WORLD 1 COMPLETE!", canvas.width / 2, 180);
+
+ctx.fillStyle = "white";
+ctx.font = "bold 28px Arial";
+ctx.fillText("SCRAP YARD", canvas.width / 2, 240);
+}
+// SCENE 2 - THE MYSTERY PLANET!
+if (endingTime >= 3000) {
+    ctx.fillStyle = "#8B5CF6";
+    ctx.beginPath();
+    const planetSize = 90 + Math.min((endingTime - 3000) / 30, 180);
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.fill();
+// PURPLE PLANET CRATERS!
+ctx.fillStyle = "#5c1cc4";
+// GLOWING CRATER RIM!
+ctx.strokeStyle = "#8452C9";
+ctx.lineWidth = 5;
+
+ctx.beginPath();
+ctx.arc(canvas.width / 2 - planetSize * 0.35,
+        180 - planetSize * 0.2,
+        planetSize * 0.18, 0, Math.PI * 2);
+ctx.stroke();
+// Crater 1
+// DARK SHADOW INSIDE CRATER 1!
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 - planetSize * 0.35,
+        180 - planetSize * 0.2,
+        planetSize * 0.16, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 1 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 4;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 - planetSize * 0.35,
+    180 - planetSize * 0.2,
+    planetSize * 0.13,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+
+// Crater 2
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.3,
+        180 + planetSize * 0.25,
+        planetSize * 0.22, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 2 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 4;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 + planetSize * 0.3,
+    180 + planetSize * 0.25,
+    planetSize * 0.19,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+// Crater 3
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.1,
+        180 - planetSize * 0.4,
+        planetSize * 0.1, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 3 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 3;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 + planetSize * 0.1,
+    180 - planetSize * 0.4,
+    planetSize * 0.07,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+// RIMS FOR CRATERS 2 AND 3!
+ctx.strokeStyle = "#8452C9";
+ctx.lineWidth = 5;
+
+// Crater 2 rim
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.3,
+        180 + planetSize * 0.25,
+        planetSize * 0.24, 0, Math.PI * 2);
+ctx.stroke();
+
+// Crater 3 rim
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.1,
+        180 - planetSize * 0.4,
+        planetSize * 0.12, 0, Math.PI * 2);
+ctx.stroke();
+// PLANET SHADOW FOR A 3D LOOK!
+const planetShadow = ctx.createRadialGradient(
+    canvas.width / 2 - planetSize * 0.3,
+    180 - planetSize * 0.3,
+    planetSize * 0.1,
+    canvas.width / 2,
+    180,
+    planetSize
+);
+
+planetShadow.addColorStop(0, "rgba(255,255,255,0.12)");
+planetShadow.addColorStop(0.6, "rgba(0,0,0,0)");
+planetShadow.addColorStop(1, "rgba(15,0,45,0.75)");
+
+ctx.fillStyle = planetShadow;
+ctx.beginPath();
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.fill();
+// TINY CRATERS ON THE PLANET!
+for (let i = 0; i < 18; i++) {
+    const angle = i * 2.4;
+    const distance = Math.sqrt((i + 1) / 20) * planetSize * 0.8;
+
+    const craterX = canvas.width / 2 + Math.cos(angle) * distance;
+    const craterY = 180 + Math.sin(angle) * distance;
+    const craterRadius = planetSize * (0.015 + (i % 3) * 0.008);
+
+    ctx.fillStyle = "#6933AE";
+    ctx.beginPath();
+    ctx.arc(craterX, craterY, craterRadius, 0, Math.PI * 2);
+    ctx.fill();
+}
+// ROCKY PLANET SURFACE!
+for (let i = 0; i < 80; i++) {
+    const angle = i * 2.39996;
+    const distance = Math.sqrt((i + 0.5) / 80) * planetSize * 0.9;
+
+    const rockX = canvas.width / 2 + Math.cos(angle) * distance;
+    const rockY = 180 + Math.sin(angle) * distance;
+
+    const rockSize = planetSize * (0.003 + (i % 4) * 0.002);
+
+    ctx.fillStyle = i % 2 === 0 ? "#6D3AB8" : "#A67AF0";
+
+    ctx.beginPath();
+    ctx.arc(rockX, rockY, rockSize, 0, Math.PI * 2);
+    ctx.fill();
+}
+// GLOWING PURPLE ATMOSPHERE!
+ctx.save();
+
+ctx.shadowColor = "#B266FF";
+ctx.shadowBlur = 30;
+ctx.strokeStyle = "#D8A8FF";
+ctx.lineWidth = 3;
+
+ctx.beginPath();
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.stroke();
+
+ctx.restore();
+// CAPTAIN PIXEL'S ROCKET!
+if (endingTime < 7500) {
+ctx.fillStyle = "#C0C0C0";
+ctx.beginPath();
+const rocketX = Math.min((endingTime - 3000) / 15, 450);
+ctx.moveTo(100 + rocketX, 170);
+ctx.lineTo(140 + rocketX, 190);
+ctx.lineTo(100 + rocketX, 210);
+ctx.closePath();
+ctx.fill();
+// GLOWING BLUE COCKPIT WINDOW!
+ctx.fillStyle = "#00D9FF";
+ctx.beginPath();
+ctx.arc(115 + rocketX, 190, 8, 0, Math.PI * 2);
+ctx.fill();
+// RED ROCKET FINS!
+ctx.fillStyle = "#FF3333";
+
+// Top fin
+ctx.beginPath();
+ctx.moveTo(105 + rocketX, 175);
+ctx.lineTo(90 + rocketX, 155);
+ctx.lineTo(125 + rocketX, 182);
+ctx.closePath();
+ctx.fill();
+
+// Bottom fin
+ctx.beginPath();
+ctx.moveTo(105 + rocketX, 205);
+ctx.lineTo(90 + rocketX, 225);
+ctx.lineTo(125 + rocketX, 198);
+ctx.closePath();
+ctx.fill();
+// ROCKET ENGINE FLAMES!
+const flameLength = 15 + Math.sin(Date.now() / 80) * 8;
+
+ctx.fillStyle = "#FF8800";
+ctx.beginPath();
+ctx.moveTo(100 + rocketX, 182);
+ctx.lineTo(100 - flameLength + rocketX, 190);
+ctx.lineTo(100 + rocketX, 198);
+ctx.closePath();
+ctx.fill();
+// SUPER-HOT YELLOW ENGINE FLAME!
+ctx.fillStyle = "#FFFF00";
+ctx.beginPath();
+ctx.moveTo(100 + rocketX, 186);
+ctx.lineTo(100 - flameLength * 0.65 + rocketX, 190);
+ctx.lineTo(100 + rocketX, 194);
+ctx.closePath();
+ctx.fill();
+}
+// WORLD 2 REVEAL!
+if (endingTime >= 7500) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 36px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("WORLD 2", canvas.width / 2, 360);
+    
+}
+}
+} else
     if (cutscenePlaying) {
         // Play the opening movie instead of the game
         drawOpeningCutscene();
@@ -1924,6 +2849,29 @@ function endCutscene() {
 
 // Start when the player presses a key
 document.addEventListener("keydown", startMusic);
+// WORLD 2 - PRESS F TO BLAST THE PORTAL ICE!
+document.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() !== "f") return;
+
+    // Only works in World 2, Level 7
+    if (currentLevel !== 7 || portalIceMelted) return;
+
+    // Captain Pixel needs ALL the Fire Orbs!
+    if (!coins.every(coin => coin.collected)) return;
+
+    // Must be close to the frozen portal
+    const distance = Math.abs(
+        (player.x + player.width / 2) - (finishFlag.x + 5)
+    );
+
+    if (distance > 120) return;
+
+    // FIRE BLAST!
+    portalFireBlasting = true;
+    portalFireStart = performance.now();
+    // The ice melts AFTER the fire blast finishes!
+portalIceMelted = false;
+});
 
 // MUSIC BUTTON INSIDE GAME CANVAS
 const musicButton = {

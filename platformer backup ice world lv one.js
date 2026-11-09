@@ -1,0 +1,3120 @@
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+ // SCROLLING CAMERA
+let cameraX = 0;
+let worldWidth = 800;
+
+// Our player
+const player = {
+    x: 60,
+    y: 300,
+    width: 32,
+    height: 32,
+    speed: 4,
+    velocityY: 0,
+    jumping: false
+};
+// Which direction Captain Pixel is facing
+let facingRight = true;
+// Is the game paused?
+let gamePaused = false;
+// WORLD 2 ROCKET LANDING ANIMATION!
+// CAPTAIN PIXEL EXITS THE ROCKET!
+let captainExitingRocket = false;
+let captainExitStart = 0;
+
+// WORLD 2 - FROZEN PORTAL!
+let portalIceMelted = false;
+let portalFireBlasting = false;
+let portalFireStart = 0;
+
+// FINAL FIRE ORB POWER-UP ANIMATION!
+let firePowerMaxedStart = 0;
+let firePowerMaxedShown = false;
+
+let rocketLandingPlaying = false;
+let rocketLandingStart = 0;
+let worldEndingPlaying = false;
+let worldEndingStart = 0;
+// WORLD 1 VICTORY MUSIC!
+const worldVictoryMusic = new Audio("audio/world1-victory.mp3");
+worldVictoryMusic.volume = 0.6;
+worldVictoryMusic.loop = false;
+
+// COSMIC COSTUME SHOP
+let shopOpen = false;
+let goldenCostume = false;
+let goldenPurchased = localStorage.getItem("goldenPurchased") === "true";
+let shopCoins = 0;
+
+// BORP - LEVEL 6 BOSS
+let borp = {
+    x: 550,
+    y: 310,
+    width: 90,
+    height: 100,
+    health: 4,
+defeated: false,
+speed: 1,
+deathStarted: 0,
+dying: false,
+lastHit: 0,
+flashTimer: 0
+
+};
+// Cosmic Costume Shop mouse controls
+canvas.addEventListener("click", (event) => {
+    // Full Reset button in the Pause Menu
+if (gamePaused && !shopOpen) {
+   
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+    const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
+
+    if (
+        mouseX >= canvas.width / 2 - 90 &&
+        mouseX <= canvas.width / 2 + 90 &&
+        mouseY >= canvas.height / 2 + 115 &&
+        mouseY <= canvas.height / 2 + 155
+    ) {
+        if (confirm("FULL RESET? This will erase your coins, costumes, and game progress!")) {
+            localStorage.removeItem("goldenPurchased");
+            location.reload();
+        }
+        return;
+    }
+}
+    if (!gamePaused || !shopOpen) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+    const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
+    // Classic Astronaut EQUIP button
+if (
+    mouseX >= 125 &&
+    mouseX <= 235 &&
+    mouseY >= 265 &&
+    mouseY <= 295
+) {
+    goldenCostume = false;
+    return;
+}
+    // Golden Astronaut button
+    if (
+       mouseX >= 365 &&
+mouseX <= 475 &&
+mouseY >= 265 &&
+mouseY <= 295
+    ) {
+        if (goldenPurchased) {
+    goldenCostume = !goldenCostume;
+} else if (shopCoins >= 25) {
+    shopCoins -= 25;
+    goldenPurchased = true;
+    localStorage.setItem("goldenPurchased", "true");
+    goldenCostume = true;
+}
+    }
+});
+// DIMENSIONAL PORTAL OPENING ANIMATION
+let portalOpeningStart = null;
+let portalTraveling = false;
+let portalTravelStart = null;
+
+// OPENING STORY CUTSCENE
+let cutscenePlaying = true;
+let cutsceneStart = performance.now();
+
+ // PRESS S TO SKIP THE OPENING CUTSCENE
+ document.addEventListener("keydown", function(event) {
+     if (event.code === "KeyS" && cutscenePlaying) {
+        endCutscene();
+     }
+ });
+
+    // SECRET DEVELOPER MODE
+    let developerMode = false;
+    let secretInput = "";
+    const secretCode = "GALAXY";
+
+    document.addEventListener("keydown", function(event) {
+        if (event.repeat) return;
+
+        const key = event.key.toUpperCase();
+
+        // Listen for the secret word PIXEL
+        if (/^[A-Z]$/.test(key)) {
+            secretInput = (secretInput + key).slice(-secretCode.length);
+
+            if (secretInput === secretCode) {
+                developerMode = !developerMode;
+                if (developerMode) {
+    shopCoins += 1000;
+}
+                secretInput = "";
+
+                alert(
+                    developerMode
+                        ? "🚀 DEVELOPER MODE ON! Press 1-7 to skip levels."
+                        : "🔒 Developer mode OFF!"
+                );
+            }
+        }
+
+        // Developer level shortcuts
+        
+        // SECRET LEVEL SKIP!
+        if (developerMode && /[1-7]$/.test(key)) {
+            const level = Number(key);
+
+            if (level === 1) {
+                // Level 1 is the original starting level
+                location.reload();
+                return;
+            }
+
+            if (level === 2) loadLevel2();
+            if (level === 3) loadLevel3();
+            if (level === 4) loadLevel4();
+            if (level === 5) loadLevel5();
+            if (level === 6) loadLevel6();
+            if (level === 7) loadLevel7();
+
+            // Resume gameplay after skipping
+            gamePaused = false;
+            gameWon = false;
+
+            // Clear old rocket sparks
+            rocketParticles = [];
+
+            console.log("Developer jumped to Level " + level);
+        }
+
+    });
+
+// Captain Pixel's rocket particles
+let rocketParticles = [];
+// Gravity pulls the player downward
+const gravity = 0.5;
+const jumpPower = -11;
+
+ // COINS TO COLLECT
+let coins = [
+    { x: 215, y: 290, collected: false },
+    { x: 425, y: 210, collected: false },
+    { x: 635, y: 140, collected: false },
+    { x: 613, y: 360, collected: false }
+];
+
+let score = 0;
+
+// Platforms to jump on
+let platforms = [
+    { x: 0, y: 410, width: 800, height: 40 },
+    { x: 170, y: 330, width: 130, height: 20 },
+    { x: 380, y: 250, width: 130, height: 20 },
+    { x: 590, y: 180, width: 130, height: 20 }
+];
+
+ // DANGEROUS SPIKES!
+let spikes = [
+    { x: 110, y: 390, width: 30, height: 20 },
+    { x: 320, y: 390, width: 30, height: 20 },
+    { x: 520, y: 370, width: 60, height: 40 },
+    { x: 660, y: 370, width: 60, height: 40 }
+];
+
+ // FINISH FLAG
+const finishFlag = {
+    x: 750,
+    y: 340,
+    width: 20,
+    height: 70
+};
+
+let gameWon = false;
+// Which level is the player on?
+let currentLevel = 1;
+
+ // OUR FIRST ENEMY!
+const alien = {
+    x: 550,
+    y: 380,
+    width: 30,
+    height: 30,
+    speed: 2
+};
+
+ // CORP - THE LEVEL 4 ENEMY
+
+const corp = {
+    x: 550,
+    y: 378,
+    width: 32,
+    height: 32,
+    speed: 1.8,
+    defeated: false
+};
+
+
+// Remember which keys are pressed
+const keys = {};
+
+document.addEventListener("keydown", (event) => {
+    if (["ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
+        event.preventDefault();
+    }
+
+    if (event.code === "KeyP" && !event.repeat) {
+        gamePaused = !gamePaused;
+    }
+
+    if (event.code === "KeyC" && !event.repeat && gamePaused) {
+        shopOpen = !shopOpen;
+    }
+
+    keys[event.code] = true;
+});
+
+document.addEventListener("keyup", (event) => {
+    keys[event.code] = false;
+});
+
+// Update the player's position
+function update() {
+    if (gameWon) return;
+    if (keys["ArrowRight"] && !portalTraveling) {
+        player.x += player.speed;
+        facingRight = true;
+    }
+
+    if (keys["ArrowLeft"] && !portalTraveling) {
+        player.x -= player.speed;
+        facingRight = false;
+    }
+
+    if (keys["Space"] && !player.jumping && !portalTraveling) {
+        player.velocityY = jumpPower;
+        player.jumping = true;
+    }
+
+    const previousBottom = player.y + player.height;
+
+    player.velocityY += gravity;
+    player.y += player.velocityY;
+
+    // Check if player lands on a platform
+    for (const platform of platforms) {
+        const playerBottom = player.y + player.height;
+
+        if (
+            player.x + player.width > platform.x &&
+            player.x < platform.x + platform.width &&
+            previousBottom <= platform.y &&
+            playerBottom >= platform.y &&
+            player.velocityY >= 0
+        ) {
+            player.y = platform.y - player.height;
+            player.velocityY = 0;
+            player.jumping = false;
+        }
+        
+// Check if the player touches a coin
+for (const coin of coins) {
+if (coin.collected || coin.hidden) continue;
+
+    const closestX = Math.max(
+        player.x,
+        Math.min(coin.x, player.x + player.width)
+    );
+
+    const closestY = Math.max(
+        player.y,
+        Math.min(coin.y, player.y + player.height)
+    );
+
+    const distanceX = coin.x - closestX;
+    const distanceY = coin.y - closestY;
+
+    if (distanceX ** 2 + distanceY ** 2 < 15 ** 2) {
+        coin.collected = true;
+        score += 1;
+        shopCoins += 1;
+    }
+}
+
+    }
+
+    // Keep player inside the screen horizontally
+    
+ // Keep the player inside the WORLD, not just the screen
+player.x = Math.max(
+    0,
+    Math.min(worldWidth - player.width, player.x)
+);
+
+// Make the camera follow on scrolling levels
+if (currentLevel === 5 || currentLevel >= 7) {
+    cameraX = Math.max(
+        0,
+        Math.min(
+            worldWidth - canvas.width,
+            player.x - canvas.width / 2
+        )
+    );
+} else {
+    cameraX = 0;
+}
+
+
+    // Restart if player falls off the screen
+    if (player.y > canvas.height) {
+        player.x = 60;
+        player.y = 300;
+        player.velocityY = 0;
+        player.jumping = true;
+    }
+    
+// CHECK IF PLAYER TOUCHES A SPIKE
+for (const spike of spikes) {
+
+    const spikeHitbox = {
+        x: spike.x + 7,
+        y: spike.y + 7,
+        width: spike.width - 14,
+        height: spike.height - 7
+    };
+
+    if (
+        player.x < spikeHitbox.x + spikeHitbox.width &&
+        player.x + player.width > spikeHitbox.x &&
+        player.y < spikeHitbox.y + spikeHitbox.height &&
+        player.y + player.height > spikeHitbox.y
+    ) {
+        resetPlayer();
+        break;
+    }
+}
+
+ // CORP COLLISION
+if (currentLevel === 4 && !corp.defeated) {
+
+    // CORP CHASES THE PLAYER!
+    if (corp.x < player.x) {
+        corp.x += corp.speed;
+    } else if (corp.x > player.x) {
+        corp.x -= corp.speed;
+    }
+
+    const touchingCorp =
+        player.x < corp.x + corp.width &&
+        player.x + player.width > corp.x &&
+        player.y < corp.y + corp.height &&
+        player.y + player.height > corp.y;
+
+    if (touchingCorp) {
+
+        // Did the player land on CORP's head?
+        const landedOnHead =
+            player.velocityY >= 0 &&
+            previousBottom <= corp.y + 12;
+
+        if (landedOnHead) {
+
+            // CORP is defeated!
+            corp.defeated = true;
+
+            // Bounce the player upward
+            player.velocityY = -14;
+            player.jumping = true;
+
+            
+    // Drop the secret coin where Corp was defeated!
+    coins[0].x = corp.x + corp.width / 2 - 10;
+    coins[0].y = corp.y - 25;
+
+    // Reveal the coin
+    coins[0].hidden = false;
+
+
+        } else {
+
+            // Touching CORP from the side is dangerous!
+            resetPlayer();
+        }
+    }
+}
+
+ // Check if EVERY coin has been collected
+const allCoinsCollected = coins.every(
+    coin => coin.collected
+);
+
+// CHECK IF PLAYER REACHES THE FINISH FLAG
+
+if (
+    allCoinsCollected &&
+    player.x < finishFlag.x + finishFlag.width &&
+    player.x + player.width > finishFlag.x &&
+    player.y < finishFlag.y + finishFlag.height &&
+    player.y + player.height > finishFlag.y
+) {
+ 
+    // Start Captain Pixel's portal journey!
+if (!portalTraveling) {
+    portalTraveling = true;
+    portalTravelStart = performance.now();
+    score += 10;
+    shopCoins += 10;
+}
+
+    
+
+// Wait 1.2 seconds before changing levels
+if (performance.now() - portalTravelStart >= 1200) {
+if (currentLevel === 1) {
+    loadLevel2();
+} else if (currentLevel === 2) {
+    loadLevel3();
+} else if (currentLevel === 3) {
+    loadLevel4();
+} else if (currentLevel === 4) {
+    loadLevel5();
+} else if (currentLevel === 5) {
+    loadLevel6();
+} else if (currentLevel === 6) {
+    // WORLD 1 COMPLETE - SCRAP YARD!
+    worldEndingPlaying = true;
+    worldEndingStart = performance.now();
+    // STOP SCRAP YARD MUSIC FOR THE VICTORY!
+document.getElementById("backgroundMusic").pause();
+    // PLAY WORLD 1 VICTORY MUSIC!
+worldVictoryMusic.currentTime = 0;
+worldVictoryMusic.play().catch(error => {
+    console.log("Victory music could not play:", error);
+});
+    gameWon = true;
+}
+else if (currentLevel === 7) {
+    // WORLD 2 - FROZEN LANDING COMPLETE!
+    portalTraveling = false;
+    gameWon = true;
+}
+
+
+} // End portal travel timer
+    } // End portal travel timer
+
+ // End portal collision check
+
+
+// BORP - LEVEL 6 BOSS CHASE
+if (currentLevel === 6 && !borp.defeated) {
+    if (borp.x > player.x + player.width) {
+        borp.x -= borp.speed;
+    } else if (borp.x + borp.width < player.x) {
+        borp.x += borp.speed;
+    }
+}
+// BORP - HEAD STOMP DETECTION
+if (currentLevel === 6 && !borp.defeated) {
+    if (borp.flashTimer > 0) {
+    borp.flashTimer--;
+}
+    const playerBottom = player.y + player.height;
+
+    const touchingBorp =
+        player.x + player.width > borp.x &&
+        player.x < borp.x + borp.width &&
+        playerBottom >= borp.y &&
+        playerBottom <= borp.y + 20;
+
+    if (
+        touchingBorp &&
+        player.velocityY > 0 &&
+        performance.now() - borp.lastHit > 1000
+    ) {
+        borp.health -= 1;
+        borp.flashTimer = 15;
+        borp.lastHit = performance.now();
+
+        // Bounce Captain Pixel upward!
+        player.velocityY = -12;
+
+      if (borp.health <= 0 && !borp.dying) {
+    // START BORP'S DEATH ANIMATION!
+    borp.dying = true;
+    borp.deathStarted = performance.now();
+}
+}
+    }
+// FINISH BORP'S DEATH ANIMATION
+if (currentLevel === 6 && borp.dying &&
+    performance.now() - borp.deathStarted >= 1500) {
+
+    borp.defeated = true;
+    borp.dying = false;
+    coins[0].hidden = false;
+}
+// BORP DAMAGES CAPTAIN PIXEL!
+if (currentLevel === 6 && !borp.defeated && !borp.dying) {
+    const touchingBody =
+        player.x + player.width > borp.x &&
+        player.x < borp.x + borp.width &&
+        player.y + player.height > borp.y + 20 &&
+        player.y < borp.y + borp.height;
+
+    if (touchingBody) {
+        resetPlayer();
+    }
+}
+ // ALIEN CHASE BEHAVIOR
+if (currentLevel === 3 && !gameWon && !portalTraveling) {
+
+    // Move toward the player
+    if (alien.x < player.x) {
+        alien.x += alien.speed;
+    } else if (alien.x > player.x) {
+        alien.x -= alien.speed;
+    }
+
+    // Check if the alien catches the player
+    if (
+        player.x < alien.x + alien.width &&
+        player.x + player.width > alien.x &&
+        player.y < alien.y + alien.height &&
+        player.y + player.height > alien.y
+    ) {
+        resetPlayer();
+
+        // Reset alien so the player has time to escape
+        alien.x = 550;
+    }
+}
+
+}
+
+// Draw everything
+
+function updateRocketParticles() {
+
+    // Create sparks while Captain Pixel is jumping
+    if (player.jumping) {
+        for (let i = 0; i < 2; i++) {
+            rocketParticles.push({
+                x: player.x + 10 + Math.random() * 12,
+                y: player.y + player.height,
+                vx: (Math.random() - 0.5) * 2,
+                vy: 1 + Math.random() * 2,
+                life: 25,
+                size: 0.5 + Math.random() * 1
+            });
+        }
+    }
+
+    // Move and fade existing sparks
+    for (let i = rocketParticles.length - 1; i >= 0; i--) {
+        const p = rocketParticles[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+
+        if (p.life <= 0) {
+            rocketParticles.splice(i, 1);
+        }
+    }
+}
+
+function draw() {
+
+    // SPACE ADVENTURE - STAR BACKGROUND
+    ctx.fillStyle = "#071329";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw distant stars
+    for (let i = 0; i < 65; i++) {
+        const starX = (i * 137 + 29) % canvas.width;
+        const starY = (i * 79 + 17) % canvas.height;
+
+        ctx.fillStyle = i % 4 === 0
+            ? "#42d6ff"
+            : "#ffffff";
+
+        const starSize = i % 5 === 0 ? 3 : 2;
+
+        ctx.fillRect(starX, starY, starSize, starSize);
+    }
+
+    // DIMENSIONAL RIPS IN THE GAME BACKGROUND
+    const spaceRips = [
+        { x: 110, y: 130, size: 28 },
+        { x: 350, y: 190, size: 22 },
+        { x: 690, y: 105, size: 35 },
+        { x: 220, y: 315, size: 25 },
+        { x: 560, y: 330, size: 30 }
+    ];
+
+    for (let i = 0; i < spaceRips.length; i++) {
+        const rip = spaceRips[i];
+
+        // Make the cracks slowly flicker
+        const flicker =
+            0.7 + Math.sin(Date.now() / 400 + i * 2) * 0.3;
+
+        ctx.save();
+        ctx.globalAlpha = flicker;
+        ctx.strokeStyle = "#b56aff";
+        ctx.lineWidth = 2;
+        ctx.shadowColor = "#a66bff";
+        ctx.shadowBlur = 15;
+
+        // Draw a jagged crack
+        ctx.beginPath();
+        ctx.moveTo(rip.x, rip.y);
+        ctx.lineTo(rip.x + 6, rip.y + rip.size * 0.3);
+        ctx.lineTo(rip.x - 4, rip.y + rip.size * 0.6);
+        ctx.lineTo(rip.x + 8, rip.y + rip.size * 0.8);
+        ctx.lineTo(rip.x + 2, rip.y + rip.size);
+        ctx.stroke();
+
+        // Bright glowing center
+        ctx.strokeStyle = "#e8c7ff";
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // GIANT ALIEN PLANET
+    // Moves slowly when the camera scrolls
+    const planetX = 620 - cameraX * 0.2;
+    const planetY = 115;
+    const planetRadius = 65;
+
+    // Purple glow around the planet
+    const glow = ctx.createRadialGradient(
+        planetX, planetY, 35,
+        planetX, planetY, 105
+    );
+
+    glow.addColorStop(
+    0,
+    currentLevel >= 7
+        ? "rgba(255, 100, 0, 0.85)"
+        : "rgba(155, 92, 255, 0.5)"
+);
+    glow.addColorStop(1, "rgba(155, 92, 255, 0)");
+
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, 105, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Planet surface
+    // VOLCANIC PLANET ILLUMINATED BY LAVA!
+ctx.fillStyle = currentLevel >= 7
+    ? "#69302B"
+    : "#8454d6";
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, planetRadius, 0, Math.PI * 2);
+    ctx.fill();
+// WORLD 2 - GLOWING VOLCANIC LAVA!
+if (currentLevel >= 7) {
+    ctx.save();
+
+    // Keep the lava inside the planet!
+    ctx.beginPath();
+    ctx.arc(planetX, planetY, planetRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Glowing lava river
+    ctx.strokeStyle = "#FF5500";
+    ctx.lineWidth = 8;
+    ctx.shadowColor = "#FF3300";
+    ctx.shadowBlur = 15;
+
+    ctx.beginPath();
+    ctx.moveTo(planetX - 50, planetY - 45);
+    ctx.lineTo(planetX - 25, planetY - 20);
+    ctx.lineTo(planetX - 35, planetY + 10);
+    ctx.lineTo(planetX + 5, planetY + 25);
+    ctx.lineTo(planetX + 30, planetY + 55);
+    ctx.stroke();
+
+    ctx.restore();
+}
+    // Planet highlight
+    ctx.fillStyle = currentLevel >= 7
+    ? "rgba(255, 170, 50, 0.55)"
+    : "rgba(210, 175, 255, 0.3)";   
+    ctx.beginPath();
+    ctx.arc(planetX - 18, planetY - 20, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Small planet craters
+    ctx.fillStyle = "rgba(55, 30, 110, 0.35)";
+
+    ctx.beginPath();
+    ctx.arc(planetX + 25, planetY + 15, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(planetX - 20, planetY + 30, 8, 0, Math.PI * 2);
+    ctx.fill();
+// WORLD 2 - DISTANT FROZEN MOUNTAINS!
+if (currentLevel >= 7) {
+    ctx.save();
+
+    // Mountains move slowly as Captain Pixel explores
+    const mountainShift = cameraX * 0.45;
+
+    for (let i = -1; i < 6; i++) {
+        const x = i * 240 - mountainShift;
+        const peakY = 170 + (i % 3) * 35;
+
+        // Dark blue mountain
+        ctx.fillStyle = "#294D78";
+        ctx.beginPath();
+        ctx.moveTo(x, 410);
+        ctx.lineTo(x + 120, peakY);
+        ctx.lineTo(x + 240, 410);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow-covered peak
+        ctx.fillStyle = "#D8F8FF";
+        ctx.beginPath();
+        ctx.moveTo(x + 120, peakY);
+        ctx.lineTo(x + 85, peakY + 70);
+        ctx.lineTo(x + 110, peakY + 55);
+        ctx.lineTo(x + 130, peakY + 70);
+        ctx.lineTo(x + 155, peakY + 70);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+ // Move the game world opposite the camera
+
+ctx.save();
+ctx.translate(-cameraX, 0);
+
+    
+    // GLOWING SPACE PLATFORMS!
+    for (const platform of platforms) {
+        ctx.save();
+
+        // Electric blue glow
+        ctx.shadowColor = "#42d6ff";
+        ctx.shadowBlur = 12;
+
+        // Dark metallic platform
+       // WORLD 2 GETS FROZEN ICE PLATFORMS!
+ctx.fillStyle = currentLevel >= 7
+    ? "#69DFFF"
+    : "#182b49";
+        ctx.fillRect(
+            platform.x,
+            platform.y,
+            platform.width,
+            platform.height
+        );
+        // WORLD 2 - ICE CRYSTALS GROWING FROM THE GROUND!
+if (currentLevel >= 7 && platform.y >= 400) {
+    ctx.save();
+
+    for (let i = 0; i < platform.width; i += 85) {
+        const x = platform.x + i + 40;
+        const y = platform.y;
+
+        ctx.fillStyle = "#B8F5FF";
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y);
+        ctx.lineTo(x - 5, y - 12);
+        ctx.lineTo(x, y - 25);
+        ctx.lineTo(x + 6, y - 10);
+        ctx.lineTo(x + 14, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Crystal shine
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 22);
+        ctx.lineTo(x, y - 5);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+        // WORLD 2 - JAGGED ICICLES UNDER PLATFORMS!
+if (currentLevel >= 7 && platform.y < 400) {
+    ctx.fillStyle = "#A8F4FF";
+
+    for (let i = 0; i < platform.width; i += 25) {
+        const spikeX = platform.x + i;
+        const spikeY = platform.y + platform.height;
+        const spikeLength = 15 + (i % 3) * 12;
+
+        ctx.beginPath();
+        ctx.moveTo(spikeX, spikeY);
+        ctx.lineTo(
+            Math.min(spikeX + 25, platform.x + platform.width),
+            spikeY
+        );
+        ctx.lineTo(spikeX + 12, spikeY + spikeLength);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+// WORLD 2 - FROSTY ICE SURFACE!
+if (currentLevel >= 7) {
+    ctx.save();
+
+    // Bright frozen top
+    ctx.fillStyle = "#E5FFFF";
+    ctx.fillRect(
+        platform.x,
+        platform.y,
+        platform.width,
+        5
+    );
+
+    // Soft icy glow
+    ctx.shadowColor = "#8AF5FF";
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = "#B8F8FF";
+    ctx.fillRect(
+        platform.x,
+        platform.y,
+        platform.width,
+        3
+    );
+
+    ctx.restore();
+}
+        // Bright neon top edge
+        ctx.fillStyle = "#42d6ff";
+        ctx.fillRect(
+            platform.x,
+            platform.y,
+            platform.width,
+            4
+        );
+
+        // Small futuristic lights
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#65eaff";
+
+        for (
+            let x = platform.x + 12;
+            x < platform.x + platform.width - 5;
+            x += 28
+        ) {
+            ctx.fillRect(
+                x,
+                platform.y + platform.height - 5,
+                10,
+                3
+            );
+        }
+
+        ctx.restore();
+    }
+
+
+
+   
+    // DRAW CAPTAIN PIXEL'S ROCKET TRAIL
+    for (const p of rocketParticles) {
+        ctx.globalAlpha = p.life / 25;
+
+        // Outer blue glow
+        ctx.fillStyle = "#2254ff";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size + 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bright cyan center
+        ctx.fillStyle = "#42d6ff";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Restore normal transparency
+    ctx.globalAlpha = 1;
+function drawCaptainPixel(preview = false, costume = goldenCostume) {
+    // CAPTAIN PIXEL - ASTRONAUT!
+    
+ctx.save();
+
+// PORTAL TRAVEL ANIMATION
+const travelProgress = portalTraveling
+    ? Math.min((performance.now() - portalTravelStart) / 1200, 1)
+    : 0;
+    // SPIN AND SHRINK INTO THE PORTAL!
+
+if (portalTraveling) {
+    const centerX = player.x + player.width / 2;
+    const centerY = player.y + player.height / 2;
+
+    // Find the center of the dimensional portal
+    const targetX = finishFlag.x + 5;
+    const targetY = finishFlag.y + 35;
+
+    // Pull Captain Pixel toward the portal
+    const pullX = (targetX - centerX) * travelProgress;
+    const pullY = (targetY - centerY) * travelProgress;
+
+    ctx.translate(pullX, pullY);
+
+    // Spin and shrink!
+    ctx.translate(centerX, centerY);
+    ctx.rotate(travelProgress * Math.PI * 4);
+
+    const shrink = Math.max(0.01, 1 - travelProgress);
+    ctx.scale(shrink, shrink);
+
+    ctx.translate(-centerX, -centerY);
+}
+// MOVE CAPTAIN PIXEL OUT OF THE ROCKET!
+if (captainExitingRocket && currentLevel === 7 && !preview) {
+    const exitTime = performance.now() - captainExitStart;
+    const progress = Math.min(exitTime / 1500, 1);
+
+    const exitX = 60 + progress * 65;
+    const exitY = 350 + progress * 20;
+
+    ctx.translate(exitX - player.x, exitY - player.y);
+}
+if (preview || facingRight) {
+ctx.translate(
+ preview ? (costume ? 450 : 210) : player.x,
+    preview ? 230 : player.y
+);
+    ctx.scale(player.width / 32, player.height / 32);
+} else {
+    ctx.translate(player.x + player.width, player.y);
+    ctx.scale(-player.width / 32, player.height / 32);
+}
+
+    // CAPTAIN PIXEL'S SPACE WADDLE!
+    const captainWalking =
+        !player.jumping &&
+        (keys["ArrowLeft"] || keys["ArrowRight"]);
+
+    if (captainWalking) {
+        
+const captainWobble =
+    Math.sin(Date.now() / 130) * 0.18;
+
+const captainSquish =
+    Math.sin(Date.now() / 130) * 0.16;
+
+
+        // Keep his feet planted while he wobbles
+        ctx.translate(16, 32);
+
+        // Rock side to side
+        ctx.rotate(captainWobble);
+
+        // Squish and stretch
+        ctx.scale(
+            1 - captainSquish * 0.5,
+            1 + captainSquish
+        );
+
+        ctx.translate(-16, -32);
+    }
+
+    
+    // DUAL ROCKET BOOSTERS!
+    if (player.jumping) {
+        const flameLength = 9 + Math.random() * 7;
+
+        // Left booster flame
+        ctx.fillStyle = "#2254ff";
+        ctx.beginPath();
+        ctx.moveTo(8, 27);
+        ctx.lineTo(11, 27 + flameLength);
+        ctx.lineTo(14, 27);
+        ctx.fill();
+
+        // Right booster flame
+        ctx.beginPath();
+        ctx.moveTo(19, 27);
+        ctx.lineTo(22, 27 + flameLength);
+        ctx.lineTo(25, 27);
+        ctx.fill();
+
+        // Bright cyan flame centers
+        ctx.fillStyle = "#42d6ff";
+        ctx.beginPath();
+        ctx.moveTo(10, 27);
+        ctx.lineTo(11, 27 + flameLength * 0.65);
+        ctx.lineTo(12, 27);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(21, 27);
+        ctx.lineTo(22, 27 + flameLength * 0.65);
+        ctx.lineTo(23, 27);
+        ctx.fill();
+    }
+
+
+    // Backpack
+    ctx.fillStyle = "#7b8da8";
+    ctx.fillRect(1, 13, 30, 16);
+
+    // Space suit
+    ctx.fillStyle = costume ? "#FFD700" : "#e8edf7";
+    ctx.fillRect(6, 13, 20, 14);
+
+    // Arms
+    ctx.fillStyle = costume ? "#DAA520" : "#c2d2e5";
+    ctx.fillRect(2, 15, 5, 12);
+    ctx.fillRect(25, 15, 5, 12);
+
+    
+    // WALKING ANIMATION!
+    // Check whether the player is moving on the ground
+    const walking =
+        !player.jumping &&
+        (keys["ArrowLeft"] || keys["ArrowRight"]);
+
+    // Make the legs swing back and forth
+    const step = walking
+        ? Math.sin(Date.now() / 90) * 4
+        : 0;
+
+    // Animated boots
+    ctx.fillStyle = costume ? "#B8860B" : "#8096b5";
+    ctx.fillRect(7 + step, 27, 8, 5);
+    ctx.fillRect(17 - step, 27, 8, 5);
+
+    // Helmet
+    ctx.fillStyle = costume ? "#FFD700" : "#f1f5ff";
+    ctx.beginPath();
+    ctx.arc(16, 12, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    
+    // SIDE-PROFILE HELMET VISOR
+    // The visor points toward the astronaut's front
+    ctx.fillStyle = "#153e70";
+    ctx.beginPath();
+    ctx.roundRect(14, 7, 15, 12, 5);
+    ctx.fill();
+
+    // Bright cyan visor reflection
+    ctx.fillStyle = "#42d6ff";
+    ctx.fillRect(20, 9, 6, 3);
+
+    // Small helmet detail on the back
+    ctx.fillStyle = "#8096b5";
+    ctx.fillRect(3, 10, 5, 7);
+
+
+    // Suit control panel
+    ctx.fillStyle = costume ? "#B8860B" : "#42d6ff";
+    ctx.fillRect(13, 18, 6, 5);
+
+    ctx.restore();
+} // End drawCaptainPixel
+    // Draw Captain Pixel normally
+if (!portalTraveling && !rocketLandingPlaying && !captainExitingRocket) {
+    drawCaptainPixel();
+}
+
+// CAPTAIN PIXEL CLIMBS OUT OF THE ROCKET!
+if (captainExitingRocket && currentLevel === 7) {
+    const exitTime = performance.now() - captainExitStart;
+    const progress = Math.min(exitTime / 1500, 1);
+
+    ctx.save();
+
+    // Start at the rocket door, then move right and down
+    const exitX = 60 + progress * 65;
+    const exitY = 350 + progress * 20;
+
+    drawCaptainPixel();
+
+    ctx.restore();
+}
+// KEEP THE ROCKET PARKED IN WORLD 2!
+if (currentLevel === 7 && !rocketLandingPlaying) {
+    drawParkedRocket();
+}
+// Draw coins
+for (const coin of coins) {
+if (coin.collected || coin.hidden) continue;
+// FIRE ORB GLOW FOR WORLD 2!
+if (currentLevel >= 7) {
+    ctx.shadowColor = "#FF4500";
+    ctx.shadowBlur = 20;
+}
+    ctx.beginPath();
+    ctx.arc(coin.x, coin.y, 15, 0, Math.PI * 2);
+    ctx.fillStyle = currentLevel >= 7 ? "#FF6600" : "#ffdd00";
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // ANIMATED FIRE ORB FLAME!
+if (currentLevel >= 7) {
+    const flicker = Math.sin(performance.now() / 120 + coin.x) * 4;
+
+    ctx.fillStyle = "#FF3300";
+    ctx.beginPath();
+    ctx.moveTo(coin.x - 10, coin.y - 5);
+    ctx.quadraticCurveTo(
+        coin.x - 5,
+        coin.y - 25 - flicker,
+        coin.x + 2,
+        coin.y - 12
+    );
+    ctx.quadraticCurveTo(
+        coin.x + 14,
+        coin.y - 30 + flicker,
+        coin.x + 10,
+        coin.y - 5
+    );
+    ctx.closePath();
+    ctx.fill();
+}
+    // RESET GLOW SO OTHER OBJECTS DON'T GLOW!
+ctx.shadowBlur = 0;
+}
+// LEVEL 6 - GIANT GREEN BORP!
+if (currentLevel === 6 && !borp.defeated) {
+    ctx.save();
+    if (borp.dying) {
+    // BORP'S DRAMATIC DEATH SHAKE!
+const deathTime = performance.now() - borp.deathStarted;
+const shake = Math.sin(deathTime / 30) * 10;
+
+ctx.translate(shake, 0);
+// BORP'S SPIN OF DOOM!
+const spin = (deathTime / 1500) * Math.PI * 4;
+
+ctx.translate(
+    borp.x + borp.width / 2,
+    borp.y + borp.height / 2
+);
+
+ctx.rotate(spin);
+// BORP SHRINKS INTO NOTHING!
+const shrink = Math.max(0.01, 1 - deathTime / 1500);
+ctx.scale(shrink, shrink);
+ctx.translate(
+    -(borp.x + borp.width / 2),
+    -(borp.y + borp.height / 2)
+);
+} else {
+    // BORP'S HAPPY BEAN DANCE!
+const borpWobble = Math.sin(Date.now() / 350) * 0.08;
+const borpSquish = Math.sin(Date.now() / 180) * 0.12;
+
+ctx.translate(
+    borp.x + borp.width / 2,
+    borp.y + borp.height
+);
+
+ctx.rotate(borpWobble);
+ctx.scale(1 - borpSquish * 0.5, 1 + borpSquish);
+
+ctx.translate(
+    -(borp.x + borp.width / 2),
+    -(borp.y + borp.height)
+);  
+}
+    ctx.fillStyle = borp.flashTimer > 0 ? "#FF3333" : "#39FF14";
+    ctx.fillRect(borp.x, borp.y, borp.width, borp.height);
+    // BORP'S LITTLE BLACK LEGS!
+ctx.fillStyle = "#000000";
+
+// Left leg - walking animation!
+const walkSwing = borp.dying
+    ? 0
+    : Math.sin(Date.now() / 220) * 18;
+ctx.fillRect(
+    borp.x + 23 + walkSwing,
+    borp.y + borp.height,
+    18,
+    20
+);
+
+// Right leg - moves opposite the left!
+ctx.fillRect(
+    borp.x + 50 - walkSwing,
+    borp.y + borp.height,
+    18,
+    20
+);
+// BORP'S LITTLE ALIEN ANTENNAE!
+ctx.strokeStyle = "#3b7406";
+ctx.lineWidth = 5;
+ctx.lineCap = "round";
+
+ctx.beginPath();
+ctx.moveTo(borp.x + 25, borp.y + 5);
+ctx.lineTo(borp.x + 18, borp.y - 20);
+
+ctx.moveTo(borp.x + 65, borp.y + 5);
+ctx.lineTo(borp.x + 72, borp.y - 20);
+ctx.stroke();
+
+// Glowing antenna tips!
+ctx.fillStyle = "#11da4d";
+ctx.beginPath();
+ctx.arc(borp.x + 18, borp.y - 20, 7, 0, Math.PI * 2);
+ctx.arc(borp.x + 72, borp.y - 20, 7, 0, Math.PI * 2);
+ctx.fill();
+    // Borp's giant alien eyes
+ctx.fillStyle = "white";
+ctx.beginPath();
+ctx.arc(borp.x + 25, borp.y + 25, 12, 0, Math.PI * 2);
+ctx.arc(borp.x + 65, borp.y + 25, 12, 0, Math.PI * 2);
+ctx.fill();
+const eyeDirectionX = Math.max(-5, Math.min(5, (player.x - borp.x) / 40));
+const eyeDirectionY = Math.max(-5, Math.min(5, (player.y - borp.y) / 40));
+// Black pupils
+ctx.fillStyle = "black";
+ctx.beginPath();
+ctx.arc(borp.x + 25 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
+ctx.arc(borp.x + 65 + eyeDirectionX, borp.y + 25 + eyeDirectionY, 5, 0, Math.PI * 2);
+ctx.fill();
+
+// BORP'S FOUR-POINT HEALTH BAR
+ctx.fillStyle = "#14213D";
+ctx.fillRect(borp.x, borp.y - 45, 90, 12);
+
+for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i < borp.health ? "#39FF14" : "#555555";
+    ctx.fillRect(borp.x + 3 + i * 22, borp.y - 42, 19, 6);
+}
+
+// White outline
+ctx.strokeStyle = "#FFFFFF";
+ctx.lineWidth = 2;
+ctx.strokeRect(borp.x, borp.y - 45, 90, 12);
+    ctx.restore();
+
+}
+
+// DRAW RED TRIANGULAR SPIKES
+for (const spike of spikes) {
+    ctx.beginPath();
+
+    ctx.moveTo(spike.x, spike.y + spike.height);
+
+    ctx.lineTo(
+        spike.x + spike.width / 2,
+        spike.y
+    );
+
+    ctx.lineTo(
+        spike.x + spike.width,
+        spike.y + spike.height
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle = "#ff425e";
+    ctx.fill();
+
+    ctx.strokeStyle = "#ff9aa9";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+
+
+
+    // DIMENSIONAL RIP / PORTAL
+    const allCoinsCollected = coins.every(
+        coin => coin.collected
+    );
+
+    const portalX = finishFlag.x + 5;
+    const portalY = finishFlag.y + 35;
+    const pulse = Math.sin(Date.now() / 250);
+// Start the opening animation when the last coin is collected
+if (allCoinsCollected && portalOpeningStart === null) {
+    portalOpeningStart = performance.now();
+}
+
+// How far has the portal opened? 0 = closed, 1 = fully open
+const portalProgress = currentLevel >= 7
+    ? 1
+    : allCoinsCollected
+        ? Math.min((performance.now() - portalOpeningStart) / 1500, 1)
+        : 0;
+    ctx.save();
+
+    if (!allCoinsCollected) {
+        // LOCKED: a jagged red crack in space
+        ctx.strokeStyle = "#ff425e";
+        ctx.lineWidth = 4;
+        ctx.shadowColor = "#ff425e";
+        ctx.shadowBlur = 12 + pulse * 5;
+
+        ctx.beginPath();
+        ctx.moveTo(portalX, portalY - 30);
+        ctx.lineTo(portalX + 8, portalY - 17);
+        ctx.lineTo(portalX - 4, portalY);
+        ctx.lineTo(portalX + 9, portalY + 14);
+        ctx.lineTo(portalX, portalY + 30);
+        ctx.stroke();
+
+    } else {
+        // UNLOCKED: a glowing swirling portal!
+        // Grow the portal from the center
+ctx.translate(portalX, portalY);
+ctx.scale(
+    Math.max(0.05, portalProgress),
+    Math.max(0.05, portalProgress)
+);
+ctx.translate(-portalX, -portalY);
+        ctx.shadowColor = "#42d6ff";
+        ctx.shadowBlur = 18 + pulse * 6;
+
+        // Purple outer portal
+        ctx.fillStyle = "#7136b4";
+        ctx.beginPath();
+        ctx.ellipse(
+            portalX, portalY,
+            19, 31, 0, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        // Blue center
+        ctx.fillStyle = "#153e83";
+        ctx.beginPath();
+        ctx.ellipse(
+            portalX, portalY,
+            14, 26, 0, 0, Math.PI * 2
+        );
+        ctx.fill();
+
+        
+    // SWIRLING DIMENSIONAL ENERGY!
+    const swirlTime = Date.now() / 400;
+
+    // Blue energy particles orbit the portal
+    for (let i = 0; i < 12; i++) {
+        const angle = swirlTime + i * Math.PI * 2 / 12;
+
+        const sparkX = portalX + Math.cos(angle) * 17;
+        const sparkY = portalY + Math.sin(angle) * 29;
+
+        ctx.fillStyle = i % 2 === 0
+            ? "#42d6ff"
+            : "#d2a6ff";
+
+        ctx.beginPath();
+        ctx.arc(sparkX, sparkY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Rotating broken energy ring
+    ctx.strokeStyle = "#42d6ff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([9, 7]);
+    ctx.lineDashOffset = -swirlTime * 5;
+
+    ctx.beginPath();
+    ctx.ellipse(
+        portalX, portalY,
+        17, 29,
+        0,
+        0, Math.PI * 2
+    );
+    ctx.stroke();
+
+    // Return to solid lines
+    ctx.setLineDash([]);
+
+
+        // Pulsing energy core
+        ctx.fillStyle = "#a5f3ff";
+        ctx.globalAlpha = 0.5 + pulse * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(
+            portalX, portalY,
+            7, 17, 0, 0, Math.PI * 2
+        );
+        ctx.fill();
+    }
+
+    ctx.restore();
+
+// Draw Captain Pixel in front of the portal during travel
+if (portalTraveling) {
+    drawCaptainPixel();
+}
+ctx.restore(); // Stop moving the camera
+// WORLD 2 - GIANT ICE CRYSTAL TRAPPING THE PORTAL!
+if (currentLevel === 7 && !portalIceMelted) {
+    ctx.save();
+
+    const iceCenterX = finishFlag.x + 5 - cameraX;
+    const iceCenterY = finishFlag.y + 35;
+    // ICE SHRINKS WHILE THE FIRE BLAST HITS!
+const meltProgress = portalFireBlasting
+    ? Math.min((performance.now() - portalFireStart) / 800, 1)
+    : 0;
+
+ctx.translate(iceCenterX, iceCenterY + 45);
+ctx.scale(1 - meltProgress, 1 - meltProgress);
+ctx.translate(-iceCenterX, -(iceCenterY + 45));
+
+    // Glowing frozen crystal
+    ctx.shadowColor = "#65E9FF";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "rgba(100, 220, 255, 0.75)";
+
+    ctx.beginPath();
+    ctx.moveTo(iceCenterX - 45, iceCenterY + 45);
+    ctx.lineTo(iceCenterX - 50, iceCenterY - 20);
+    ctx.lineTo(iceCenterX - 30, iceCenterY - 55);
+    ctx.lineTo(iceCenterX - 10, iceCenterY - 40);
+    ctx.lineTo(iceCenterX + 5, iceCenterY - 75);
+    ctx.lineTo(iceCenterX + 25, iceCenterY - 45);
+    ctx.lineTo(iceCenterX + 45, iceCenterY - 55);
+    ctx.lineTo(iceCenterX + 50, iceCenterY + 45);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "#E5FFFF";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.restore();
+}
+// WORLD 2 - CAPTAIN PIXEL'S FIRE BLAST!
+if (currentLevel === 7 && portalFireBlasting) {
+    const fireTime = performance.now() - portalFireStart;
+
+    if (fireTime < 800) {
+        ctx.save();
+
+        // Captain Pixel shoots toward the portal!
+        const startX = player.x + player.width / 2 - cameraX;
+        const startY = player.y + player.height / 2;
+        const endX = finishFlag.x + 5 - cameraX;
+        const endY = finishFlag.y + 35;
+
+        // Flickering outer flames
+        ctx.strokeStyle = "#FF5500";
+        ctx.lineWidth = 25 + Math.random() * 10;
+        ctx.shadowColor = "#FF3300";
+        ctx.shadowBlur = 25;
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        // Super-hot yellow center
+        ctx.strokeStyle = "#FFFF44";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+
+        ctx.restore();
+    } else {
+    portalFireBlasting = false;
+    portalIceMelted = true;
+}
+}
+// WORLD 2 - FROZEN PORTAL INSTRUCTIONS!
+if (currentLevel === 7 && !portalIceMelted) {
+    const distanceToPortal = Math.abs(
+        (player.x + player.width / 2) - (finishFlag.x + 5)
+    );
+
+    if (distanceToPortal < 150) {
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.font = "bold 18px Arial";
+        ctx.shadowColor = "#FF6600";
+        ctx.shadowBlur = 12;
+
+        if (coins.every(coin => coin.collected)) {
+            ctx.fillStyle = "#FFCC44";
+            ctx.fillText("🔥 PRESS F TO MELT THE ICE!", canvas.width / 2, 90);
+        } else {
+            ctx.fillStyle = "#A8F4FF";
+            ctx.fillText("COLLECT ALL FIRE ORBS!", canvas.width / 2, 90);
+        }
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - FIRE ORB TUTORIAL!
+if (currentLevel === 7 && !rocketLandingPlaying) {
+    const timeSinceLanding = performance.now() - captainExitStart;
+
+    if (timeSinceLanding < 5000 && timeSinceLanding >= 0) {
+        ctx.save();
+
+        ctx.textAlign = "center";
+        ctx.font = "bold 16px Arial";
+        ctx.fillStyle = "#FFCC44";
+        ctx.shadowColor = "#FF6600";
+        ctx.shadowBlur = 10;
+
+        ctx.fillText(
+            "COLLECT ALL FIRE ORBS TO MELT THE PORTAL ICE!",
+            canvas.width / 2,
+            115
+        );
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - DETECT MAXIMUM FIRE POWER!
+if (
+    currentLevel === 7 &&
+    !firePowerMaxedShown &&
+    coins.length > 0 &&
+    coins.every(coin => coin.collected)
+) {
+    firePowerMaxedShown = true;
+    firePowerMaxedStart = performance.now();
+}
+// WORLD 2 - FIRE POWER MAXED CELEBRATION!
+if (currentLevel === 7 && firePowerMaxedShown) {
+    const powerTime = performance.now() - firePowerMaxedStart;
+
+    if (powerTime < 2500) {
+        ctx.save();
+
+        // Quick orange flash!
+        if (powerTime < 500) {
+            ctx.fillStyle = `rgba(255, 100, 0, ${0.3 * (1 - powerTime / 500)})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Pulsing victory message!
+        const pulse = 1 + Math.sin(powerTime * 0.012) * 0.08;
+
+        ctx.translate(canvas.width / 2, 145);
+        ctx.scale(pulse, pulse);
+
+        ctx.textAlign = "center";
+        ctx.font = "bold 22px Arial";
+        ctx.fillStyle = "#FFD84D";
+        ctx.shadowColor = "#FF5500";
+        ctx.shadowBlur = 20;
+
+        ctx.fillText("FIRE POWER MAXED!", 0, 0);
+
+        ctx.font = "bold 15px Arial";
+        ctx.fillText("FIND THE FROZEN PORTAL!", 0, 28);
+
+        ctx.restore();
+    }
+}
+// WORLD 2 - FIRE POWER COUNTER!
+if (currentLevel === 7) {
+    const collectedFire = coins.filter(coin => coin.collected).length;
+    const totalFire = coins.length;
+
+    ctx.save();
+
+    ctx.font = "bold 18px Arial";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#FFAA33";
+    ctx.shadowColor = "#FF5500";
+    ctx.shadowBlur = 8;
+
+    ctx.fillText(
+        "FIRE POWER: " + collectedFire + "/" + totalFire,
+        20,
+        65
+    );
+
+    ctx.restore();
+}
+ // Draw score in a fixed position on the screen
+ctx.fillStyle = "#ffffff";
+ctx.font = "bold 24px Arial";
+ctx.textAlign = "left";
+ctx.fillText("SCORE: " + score, 20, 35);
+
+
+// VICTORY SCREEN
+if (gameWon) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#ffbd4a";
+    ctx.font = "bold 48px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+     currentLevel === 7 ? "❄️ FROZEN LANDING COMPLETE!" : "🏆 LEVEL COMPLETE!",
+        canvas.width / 2,
+        190
+    );
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "28px Arial";
+    ctx.fillText(
+        "FINAL SCORE: " + score,
+        canvas.width / 2,
+        250
+    );
+
+    ctx.font = "20px Arial";
+    ctx.fillText(
+        "Refresh to play again!",
+        canvas.width / 2,
+        310
+    );
+
+    ctx.textAlign = "left";
+}
+
+// DRAW MUSIC BUTTON
+ctx.fillStyle = "#17345b";
+ctx.fillRect(
+    musicButton.x,
+    musicButton.y,
+    musicButton.width,
+    musicButton.height
+);
+
+ctx.strokeStyle = "#42d6ff";
+ctx.lineWidth = 2;
+ctx.strokeRect(
+    musicButton.x,
+    musicButton.y,
+    musicButton.width,
+    musicButton.height
+);
+
+ctx.fillStyle = "#ffffff";
+ctx.font = "16px Arial";
+ctx.textAlign = "center";
+
+ctx.fillText(
+    musicEnabled ? "Music: ON" : "Music: OFF",
+    musicButton.x + musicButton.width / 2,
+    musicButton.y + 24
+);
+
+ctx.textAlign = "left";
+
+ // DISPLAY CURRENT LEVEL
+ctx.fillStyle = "#ffffff";
+ctx.font = "bold 24px Arial";
+ctx.textAlign = "center";
+
+ctx.fillText(
+    "LEVEL " + currentLevel,
+    canvas.width / 2,
+    35
+);
+
+ctx.textAlign = "left";
+
+ // DRAW ZORP ON LEVEL 3
+if (currentLevel === 3) {
+
+ // DRAW THE ALIEN ON LEVEL 3
+if (currentLevel === 3) {
+
+    
+    
+    // ZORP'S WOBBLING BODY!
+    // Smooth alien waddle
+const zorpWobble = Math.sin(Date.now() / 350) * 0.08;
+const zorpSquish = Math.sin(Date.now() / 180) * 0.12;
+    // Start moving the WHOLE alien
+   ctx.save();
+
+// Rotate Zorp around the bottom center of his body
+ctx.translate(
+    alien.x + alien.width / 2,
+    alien.y + alien.height
+);
+
+ctx.rotate(zorpWobble);
+// Squish shorter and wider, then stretch taller
+ctx.scale(
+    1 - zorpSquish * 0.5,
+    1 + zorpSquish
+);
+ctx.translate(
+    -(alien.x + alien.width / 2),
+    -(alien.y + alien.height)
+);
+    // Purple alien body
+    ctx.fillStyle = "#a66bff";
+    ctx.fillRect(
+        alien.x,
+        alien.y,
+        alien.width,
+        alien.height
+    );
+
+
+
+    // Where is the player compared to the alien?
+    const playerCenterX = player.x + player.width / 2;
+    const playerCenterY = player.y + player.height / 2;
+
+    const alienCenterX = alien.x + alien.width / 2;
+    const alienCenterY = alien.y + alien.height / 2;
+
+    // Calculate the direction to look
+    const dx = playerCenterX - alienCenterX;
+    const dy = playerCenterY - alienCenterY;
+
+    const distance = Math.hypot(dx, dy) || 1;
+
+    // Move pupils up to 2 pixels in that direction
+    const eyeOffsetX = (dx / distance) * 2;
+    const eyeOffsetY = (dy / distance) * 2;
+
+    // White eyes
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(alien.x + 5, alien.y + 8, 7, 7);
+    ctx.fillRect(alien.x + 18, alien.y + 8, 7, 7);
+
+    // Pupils that FOLLOW THE PLAYER!
+    ctx.fillStyle = "#091a37";
+
+    ctx.fillRect(
+        alien.x + 7 + eyeOffsetX,
+        alien.y + 10 + eyeOffsetY,
+        3,
+        3
+    );
+
+    ctx.fillRect(
+        alien.x + 20 + eyeOffsetX,
+        alien.y + 10 + eyeOffsetY,
+        3,
+        3
+    );
+}
+
+ // DISPLAY ZORP'S NAME
+ctx.fillStyle = "#ffffff";
+ctx.font = "bold 14px Arial";
+ctx.textAlign = "center";
+
+ctx.fillText(
+    "ZORP",
+    alien.x + alien.width / 2,
+    alien.y - 12
+);
+
+ctx.textAlign = "left";
+ctx.restore();
+}
+
+ // DRAW CORP
+if (currentLevel === 4 && !corp.defeated) {
+
+    // CORP'S WOBBLY WALK!
+    const corpWobble = Math.sin(Date.now() / 350) * 0.08;
+    const corpSquish = Math.sin(Date.now() / 180) * 0.12;
+
+    ctx.save();
+
+    // Rotate and squish around Corp's feet
+    ctx.translate(
+        corp.x + corp.width / 2,
+        corp.y + corp.height
+    );
+
+    ctx.rotate(corpWobble);
+
+    ctx.scale(
+        1 - corpSquish * 0.5,
+        1 + corpSquish
+    );
+
+    ctx.translate(
+        -(corp.x + corp.width / 2),
+        -(corp.y + corp.height)
+    );
+
+    // Orange body
+    ctx.fillStyle = "#ff7043";
+    ctx.fillRect(
+        corp.x,
+        corp.y,
+        corp.width,
+        corp.height
+    );
+
+    
+    // CORP'S TRACKING EYES!
+
+    // Find the center of the player
+    const playerCenterX = player.x + player.width / 2;
+    const playerCenterY = player.y + player.height / 2;
+
+    // Find the center of CORP
+    const corpCenterX = corp.x + corp.width / 2;
+    const corpCenterY = corp.y + corp.height / 2;
+
+    // Which direction is the player?
+    const dx = playerCenterX - corpCenterX;
+    const dy = playerCenterY - corpCenterY;
+
+    // Calculate distance
+    const distance = Math.hypot(dx, dy) || 1;
+
+    // Move pupils toward the player
+    const eyeOffsetX = (dx / distance) * 2;
+    const eyeOffsetY = (dy / distance) * 2;
+
+    // White eyes
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(corp.x + 5, corp.y + 8, 7, 7);
+    ctx.fillRect(corp.x + 20, corp.y + 8, 7, 7);
+
+    // Moving pupils!
+    ctx.fillStyle = "#091a37";
+
+    ctx.fillRect(
+        corp.x + 7 + eyeOffsetX,
+        corp.y + 10 + eyeOffsetY,
+        3,
+        3
+    );
+
+    ctx.fillRect(
+        corp.x + 22 + eyeOffsetX,
+        corp.y + 10 + eyeOffsetY,
+        3,
+        3
+    );
+
+    // Name
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(
+        "CORP",
+        corp.x + corp.width / 2,
+        corp.y - 12
+    );
+    ctx.textAlign = "left";
+    ctx.restore();
+}
+
+// LEVEL INSTRUCTIONS
+let instructions = "";
+
+if (currentLevel === 1 || currentLevel === 2) {
+    instructions = "Collect all coins to open the portal! BUT! Don't hit a spike!";
+} else if (currentLevel === 3) {
+    instructions = "DODGE ZORP! Jump over him and reach the portal!";
+} else if (currentLevel === 4) {
+    instructions = "JUMP ON CORP! Collect his coin to open the portal!";
+}
+
+// Draw instructions
+ctx.fillStyle = "#ffbd4a";
+ctx.font = "bold 16px Arial";
+ctx.textAlign = "center";
+
+ctx.fillText(
+    instructions,
+    canvas.width / 2,
+    75
+);
+
+ctx.textAlign = "left";
+
+ 
+    // CAPTAIN PIXEL'S PAUSE MENU
+    if (gamePaused) {
+        // COSMIC COSTUME SHOP SCREEN
+if (shopOpen) {
+    ctx.save();
+
+    ctx.fillStyle = "rgba(5, 10, 35, 0.95)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = "center";
+// CLASSIC ASTRONAUT CARD
+ctx.fillStyle = "#1B2B4B";
+ctx.fillRect(80, 185, 200, 125);
+// Mini Classic Astronaut preview
+drawCaptainPixel(true, false);
+
+ctx.strokeStyle = "#42D6FF";
+ctx.lineWidth = 3;
+ctx.strokeRect(80, 185, 200, 125);
+
+ctx.fillStyle = "#FFFFFF";
+ctx.font = "bold 17px Arial";
+ctx.textAlign = "center";
+ctx.fillText("CLASSIC ASTRONAUT", 180, 225);
+
+ctx.fillStyle = "#42D6FF";
+ctx.font = "bold 18px Arial";
+ctx.fillText("FREE", 180, 260); 
+// CLASSIC ASTRONAUT EQUIP BUTTON
+ctx.fillStyle = "#42D6FF";
+ctx.fillRect(125, 265, 110, 30);
+
+ctx.fillStyle = "#14213D";
+ctx.font = "bold 18px Arial";
+ctx.textAlign = "center";
+ctx.fillText(goldenCostume ? "EQUIP" : "EQUIPPED", 180, 286);
+// GOLDEN ASTRONAUT CARD
+ctx.fillStyle = "#1B2B4B";
+ctx.fillRect(320, 185, 200, 125);
+
+ctx.strokeStyle = "#FFD700";
+ctx.lineWidth = 3;
+ctx.strokeRect(320, 185, 200, 125);
+// Golden Astronaut preview
+drawCaptainPixel(true, true);
+    ctx.fillStyle = "#42d6ff";
+    ctx.font = "bold 36px Arial";
+    ctx.fillText("COSMIC COSTUME SHOP", canvas.width / 2, 100);
+
+    ctx.fillStyle = "#fcd94d";
+    ctx.font = "bold 22px Arial";
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("GOLDEN ASTRONAUT", 420, 225);
+ctx.fillText("25 COINS", 420, 245);
+ctx.fillStyle = "#FFD700";
+ctx.font = "bold 20px Arial";
+ctx.fillText("YOUR COINS: " + shopCoins, canvas.width / 2, 155);
+// Golden Astronaut BUY button
+ctx.fillStyle = "#FFD700";
+ctx.fillRect(365, 265, 110, 30);
+
+ctx.fillStyle = "#14213D";
+ctx.font = "bold 22px Arial";
+ctx.textAlign = "center";
+ctx.fillText(goldenPurchased ? (goldenCostume ? "EQUIPPED" : "EQUIP") : "BUY", 420, 286);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "18px Arial";
+ 
+    ctx.fillText("PRESS C TO RETURN", canvas.width / 2, 350);
+
+    ctx.restore();
+
+} else if (gamePaused) {
+    ctx.save();
+
+        // Dark transparent background
+        ctx.fillStyle = "rgba(0, 8, 25, 0.85)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Big pause title
+        ctx.fillStyle = "#42d6ff";
+        ctx.font = "bold 48px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(
+            "GAME PAUSED",
+            canvas.width / 2,
+            canvas.height / 2 - 20
+        );
+
+        // Resume message
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 20px Arial";
+        ctx.fillText(
+            "PRESS P TO RESUME",
+            canvas.width / 2,
+            canvas.height / 2 + 30
+        );
+// Cosmic Costume Shop option
+ctx.fillStyle = "#42d6ff";
+ctx.font = "bold 20px Arial";
+ctx.textAlign = "center";
+ctx.fillText(
+    "PRESS C FOR COSTUME SHOP",
+    canvas.width / 2,
+    canvas.height / 2 + 85
+);
+// FULL RESET button
+ctx.fillStyle = "#C0392B";
+ctx.fillRect(canvas.width / 2 - 90, canvas.height / 2 + 115, 180, 40);
+
+ctx.fillStyle = "#FFFFFF";
+ctx.font = "bold 18px Arial";
+ctx.textAlign = "center";
+ctx.fillText("FULL RESET", canvas.width / 2, canvas.height / 2 + 142);
+        ctx.restore();
+    }
+
+}
+}
+// RESPAWN AFTER HITTING SPIKES
+
+function resetPlayer() {
+
+    // Lose 20 points when you die
+    score = Math.max(0, score - 20);
+
+    
+    // Return player to starting position
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+
+
+ // LOAD LEVEL 2
+function loadLevel2() {
+    portalOpeningStart = null;
+    portalTraveling = false;
+portalTravelStart = null;
+    currentLevel = 2;
+    gameWon = false;
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
+    // New platforms!
+    platforms = [
+        { x: 0, y: 410, width: 800, height: 40 },
+        { x: 130, y: 330, width: 130, height: 20 },
+        { x: 310, y: 250, width: 130, height: 20 },
+        { x: 490, y: 330, width: 130, height: 20 },
+        { x: 650, y: 250, width: 130, height: 20 }
+    ];
+
+    // Four coins to collect
+    coins = [
+        { x: 190, y: 290, collected: false },
+        { x: 370, y: 210, collected: false },
+        { x: 550, y: 290, collected: false },
+        { x: 710, y: 210, collected: false }
+    ];
+
+    // More dangerous spikes!
+    spikes = [
+        { x: 100, y: 390, width: 40, height: 20 },
+        { x: 280, y: 390, width: 40, height: 20 },
+        { x: 450, y: 390, width: 40, height: 20 },
+        { x: 630, y: 390, width: 40, height: 20 }
+    ];
+
+    // Reset the character
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+
+    // Keep the score earned in Level 1!
+}
+
+ // LEVEL 3: FIRST CONTACT!
+function loadLevel3() {
+    portalOpeningStart = null;
+    portalTraveling = false;
+portalTravelStart = null;
+    currentLevel = 3;
+    gameWon = false;
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
+ // Put the alien at its starting position
+alien.x = 550;
+alien.y = 380;
+
+    // Just one flat floor
+    platforms = [
+        { x: 0, y: 410, width: 800, height: 40 }
+    ];
+
+    // No coins or spikes!
+    coins = [];
+    spikes = [];
+
+    // Start at the beginning
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+
+ // LEVEL 4 - CORP'S REVENGE
+function loadLevel4() {
+    portalOpeningStart = null;
+    portalTraveling = false;
+portalTravelStart = null;
+    currentLevel = 4;
+    gameWon = false;
+worldWidth = 800;
+cameraX = 0;
+finishFlag.x = 750;
+    // One flat floor
+    platforms = [
+        { x: 0, y: 410, width: 800, height: 40 }
+    ];
+
+    // CORP will drop the only coin
+    coins = [
+        { x: 416, y: 365, collected: false, hidden: true }
+    ];
+
+    spikes = [];
+
+    // Reset CORP
+    corp.x = 550;
+    corp.y = 378;
+    corp.defeated = false;
+
+    // Reset player
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+
+ // LEVEL 5 - BEYOND THE BORDER!
+function loadLevel5() {
+    portalOpeningStart = null;
+    portalTraveling = false;
+portalTravelStart = null;
+    currentLevel = 5;
+    gameWon = false;
+
+    // THREE screens wide!
+    worldWidth = 2400;
+    cameraX = 0;
+
+    // A long floor and new platforms
+    platforms = [
+        { x: 0, y: 410, width: 2400, height: 40 },
+        { x: 200, y: 330, width: 130, height: 20 },
+        { x: 480, y: 250, width: 130, height: 20 },
+        { x: 800, y: 330, width: 130, height: 20 },
+        { x: 1100, y: 250, width: 130, height: 20 },
+        { x: 1450, y: 330, width: 130, height: 20 },
+        { x: 1800, y: 250, width: 130, height: 20 },
+        { x: 2100, y: 330, width: 130, height: 20 }
+    ];
+
+    // Coins spread across the entire world
+    coins = [
+        { x: 265, y: 290, collected: false },
+        { x: 545, y: 210, collected: false },
+        { x: 865, y: 290, collected: false },
+        { x: 1165, y: 210, collected: false },
+        { x: 1515, y: 290, collected: false },
+        { x: 1865, y: 210, collected: false },
+        { x: 2165, y: 290, collected: false }
+    ];
+
+    // Spikes to jump over
+    spikes = [
+        { x: 380, y: 390, width: 40, height: 20 },
+        { x: 700, y: 390, width: 40, height: 20 },
+        { x: 1000, y: 390, width: 40, height: 20 },
+        { x: 1350, y: 390, width: 40, height: 20 },
+        { x: 1700, y: 390, width: 40, height: 20 },
+        { x: 2000, y: 390, width: 40, height: 20 }
+    ];
+
+    // Move the finish flag to the end of the world
+    finishFlag.x = 2330;
+
+    // Reset the player
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+// LEVEL 6 - BORP'S BOSS BATTLE!
+function loadLevel6() {
+    currentLevel = 6;
+    portalTraveling = false;
+portalTravelStart = null;
+portalOpeningStart = null;
+    gameWon = false;
+    worldWidth = 800;
+    cameraX = 0;
+    finishFlag.x = 730;
+finishFlag.y = 340;
+    // Borp's boss arena
+platforms = [
+    { x: 0, y: 410, width: 800, height: 40 },
+    { x: 150, y: 320, width: 130, height: 20 },
+    { x: 520, y: 320, width: 130, height: 20 }
+];
+
+spikes = [];
+coins = [
+    {
+        x: 585,
+        y: 260,
+        collected: false,
+        hidden: true
+    }
+];
+// Reset Captain Pixel for the boss battle
+player.x = 60;
+player.y = 300;
+player.velocityY = 0;
+player.jumping = true;
+}
+// WORLD 2 - LEVEL 1: THE FROZEN LANDING!
+function loadLevel7() {
+    currentLevel = 7;
+
+    // RESET FIRE POWER CELEBRATION!
+firePowerMaxedShown = false;
+firePowerMaxedStart = 0;
+
+// RESET THE FROZEN PORTAL!
+portalIceMelted = false;
+// FIRE BLAST IS READY ONLY AFTER ALL FIRE ORBS!
+portalFireBlasting = false;
+
+portalFireBlasting = false;
+portalFireStart = 0;
+
+    // START THE WORLD 2 ROCKET LANDING!
+rocketLandingPlaying = true;
+rocketLandingStart = performance.now();
+
+    gameWon = false;
+    portalTraveling = false;
+    portalTravelStart = null;
+    portalOpeningStart = null;
+
+    // A HUGE scrolling frozen world!
+    worldWidth = 3200;
+    cameraX = 0;
+// CLEAR OLD SPIKES FOR WORLD 2!
+spikes = [];
+    // Frozen portal at the far end
+    finishFlag.x = 3050;
+    finishFlag.y = 340;
+
+    // Frozen ground and floating ice platforms
+    platforms = [
+    // Frozen ground
+    { x: 0, y: 410, width: 3200, height: 40 },
+
+    // Frozen Landing obstacle course
+    { x: 250, y: 350, width: 150, height: 20 },
+    { x: 550, y: 310, width: 150, height: 20 },
+    { x: 850, y: 355, width: 160, height: 20 },
+    { x: 1150, y: 325, width: 150, height: 20 },
+    { x: 1450, y: 290, width: 160, height: 20 },
+    { x: 1750, y: 350, width: 150, height: 20 },
+    { x: 2050, y: 315, width: 160, height: 20 },
+    { x: 2350, y: 345, width: 150, height: 20 },
+    { x: 2650, y: 300, width: 160, height: 20 }
+    
+];
+
+    // Fire Orbs! Each one is also a shop coin.
+    coins = [
+        { x: 350, y: 280, collected: false },
+        { x: 720, y: 240, collected: false },
+        { x: 1110, y: 290, collected: false },
+        { x: 1570, y: 230, collected: false },
+        { x: 2070, y: 270, collected: false },
+        { x: 2620, y: 220, collected: false }
+    ];
+
+    // Captain Pixel lands on the frozen planet!
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+// Game loop
+// ROCKET PARKED ON THE FROZEN PLANET!
+function drawParkedRocket() {
+    const x = 60 - cameraX;
+    const y = 340;
+
+    // Red wings
+    ctx.fillStyle = "#FF3333";
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y + 45);
+    ctx.lineTo(x - 42, y + 85);
+    ctx.lineTo(x - 15, y + 70);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x + 15, y + 45);
+    ctx.lineTo(x + 42, y + 85);
+    ctx.lineTo(x + 15, y + 70);
+    ctx.fill();
+
+    // Silver rocket
+    ctx.fillStyle = "#C0D8E8";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 25, y + 70);
+    ctx.lineTo(x + 25, y + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Blue cockpit
+    ctx.fillStyle = "#00D9FF";
+    ctx.beginPath();
+    ctx.arc(x, y + 38, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // ROCKET DOOR OPENS FOR CAPTAIN PIXEL!
+if (captainExitingRocket) {
+    ctx.fillStyle = "#10243D";
+    ctx.beginPath();
+    ctx.ellipse(x, y + 55, 9, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Open silver door swings to the right
+    ctx.fillStyle = "#A8C5D8";
+    ctx.fillRect(x + 9, y + 43, 7, 25);
+}
+}
+function gameLoop() {
+    // FINISH CAPTAIN PIXEL'S ROCKET EXIT!
+if (captainExitingRocket &&
+    performance.now() - captainExitStart >= 1500) {
+    captainExitingRocket = false;
+}
+
+    // WORLD 2 ROCKET LANDING!
+if (rocketLandingPlaying) {
+    const landingTime = performance.now() - rocketLandingStart;
+
+    // Rocket flies down toward the frozen ground!
+    const rocketY = Math.min(-100 + landingTime * 0.15, 340);
+    // LAND AT CAPTAIN PIXEL'S STARTING POSITION!
+const rocketX = player.x + player.width / 2 - cameraX;
+
+    // SHOW THE ACTUAL FROZEN LEVEL BEHIND THE ROCKET!
+draw();
+// GIANT MELTING ICE BLOCK!
+const iceX = rocketX - 35;
+const iceBottom = 410;
+
+// Ice melts as the rocket gets closer!
+const meltProgress = Math.max(0, Math.min(1, (rocketY - 100) / 240));
+const iceHeight = 65 * (1 - meltProgress);
+
+if (iceHeight > 0) {
+    ctx.save();
+
+    // Glowing ice
+    ctx.shadowColor = "#00FFFF";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#79E8FF";
+    // JAGGED ALIEN ICE CRYSTAL!
+ctx.beginPath();
+ctx.moveTo(iceX, iceBottom);
+ctx.lineTo(iceX + 5, iceBottom - iceHeight * 0.7);
+ctx.lineTo(iceX + 15, iceBottom - iceHeight * 0.55);
+ctx.lineTo(iceX + 25, iceBottom - iceHeight);
+ctx.lineTo(iceX + 38, iceBottom - iceHeight * 0.65);
+ctx.lineTo(iceX + 52, iceBottom - iceHeight * 0.9);
+ctx.lineTo(iceX + 65, iceBottom - iceHeight * 0.6);
+ctx.lineTo(iceX + 70, iceBottom);
+ctx.closePath();
+ctx.fill();
+    // Frozen shine
+    ctx.fillStyle = "#D9FFFF";
+    ctx.fillRect(iceX + 8, iceBottom - iceHeight + 5, 12, iceHeight * 0.6);
+
+    ctx.restore();
+}
+// STEAM RISING FROM MELTING ICE!
+if (meltProgress > 0 && meltProgress < 1) {
+    ctx.save();
+
+    for (let i = 0; i < 8; i++) {
+        const steamX = rocketX - 30 + i * 9;
+       // STEAM FLOATS UP INTO THE SKY!
+const rise = (landingTime * 0.06 + i * 18) % 180;
+const steamY = 405 - rise;
+
+        ctx.fillStyle = "rgba(210, 245, 255, 0.45)";
+        ctx.beginPath();
+        ctx.arc(steamX, steamY, 7 + meltProgress * 8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+    // Rocket body
+    ctx.fillStyle = "#C0D8E8";
+    ctx.beginPath();
+    ctx.moveTo(rocketX, rocketY);
+ctx.lineTo(rocketX - 25, rocketY + 70);
+ctx.lineTo(rocketX + 25, rocketY + 70);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glowing cockpit
+    ctx.fillStyle = "#00D9FF";
+    ctx.beginPath();
+    ctx.arc(rocketX, rocketY + 38, 10, 0, Math.PI * 2);
+    ctx.fill();
+// RED ROCKET WINGS!
+ctx.fillStyle = "#FF3333";
+
+ctx.beginPath();
+ctx.moveTo(rocketX - 15, rocketY + 45);
+ctx.lineTo(rocketX - 42, rocketY + 85);
+ctx.lineTo(rocketX - 15, rocketY + 70);
+ctx.fill();
+
+ctx.beginPath();
+ctx.moveTo(rocketX + 15, rocketY + 45);
+ctx.lineTo(rocketX + 42, rocketY + 85);
+ctx.lineTo(rocketX + 15, rocketY + 70);
+ctx.fill();
+
+// BLAZING ROCKET ENGINE!
+if (rocketY < 340) {
+    const flicker = Math.random() * 15;
+
+    // Orange outer flame
+    ctx.fillStyle = "#FF6600";
+    ctx.beginPath();
+    ctx.moveTo(rocketX - 15, rocketY + 70);
+    ctx.lineTo(rocketX, rocketY + 115 + flicker);
+    ctx.lineTo(rocketX + 15, rocketY + 70);
+    ctx.fill();
+
+    // Yellow inner flame
+    ctx.fillStyle = "#FFFF00";
+    ctx.beginPath();
+    ctx.moveTo(rocketX - 7, rocketY + 70);
+    ctx.lineTo(rocketX, rocketY + 95 + flicker);
+    ctx.lineTo(rocketX + 7, rocketY + 70);
+    ctx.fill();
+}
+// FINISH THE ROCKET LANDING!
+if (landingTime >= 4000) {
+    rocketLandingPlaying = false;
+
+    // START CAPTAIN PIXEL'S ROCKET EXIT!
+    captainExitingRocket = true;
+    captainExitStart = performance.now();
+
+    // Keep Captain Pixel beside the rocket for now
+    player.x = 125;
+    player.y = 370;
+    player.velocityY = 0;
+    player.jumping = false;
+}
+    requestAnimationFrame(gameLoop);
+    return;
+}
+    if (worldEndingPlaying) {
+        // AFTER THE ROCKET CUTSCENE, LAND ON WORLD 2!
+if (performance.now() - worldEndingStart >= 12000) {
+    worldEndingPlaying = false;
+    worldVictoryMusic.pause();
+    loadLevel7();
+}
+        const endingTime = performance.now() - worldEndingStart;
+    ctx.fillStyle = "#080D24";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+// TWINKLING SPACE STARS!
+for (let i = 0; i < 45; i++) {
+    const starX = (i * 137 + 29) % canvas.width;
+    const starY = (i * 83 + 47) % canvas.height;
+
+    const twinkle = 0.4 + Math.sin(
+        performance.now() / 350 + i
+    ) * 0.3;
+
+    ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+    ctx.beginPath();
+    ctx.arc(starX, starY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+}
+if (endingTime < 3000) {
+ctx.fillStyle = "#39FF14";
+ctx.font = "bold 36px Arial";
+ctx.textAlign = "center";
+ctx.fillText("WORLD 1 COMPLETE!", canvas.width / 2, 180);
+
+ctx.fillStyle = "white";
+ctx.font = "bold 28px Arial";
+ctx.fillText("SCRAP YARD", canvas.width / 2, 240);
+}
+// SCENE 2 - THE MYSTERY PLANET!
+if (endingTime >= 3000) {
+    ctx.fillStyle = "#8B5CF6";
+    ctx.beginPath();
+    const planetSize = 90 + Math.min((endingTime - 3000) / 30, 180);
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.fill();
+// PURPLE PLANET CRATERS!
+ctx.fillStyle = "#5c1cc4";
+// GLOWING CRATER RIM!
+ctx.strokeStyle = "#8452C9";
+ctx.lineWidth = 5;
+
+ctx.beginPath();
+ctx.arc(canvas.width / 2 - planetSize * 0.35,
+        180 - planetSize * 0.2,
+        planetSize * 0.18, 0, Math.PI * 2);
+ctx.stroke();
+// Crater 1
+// DARK SHADOW INSIDE CRATER 1!
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 - planetSize * 0.35,
+        180 - planetSize * 0.2,
+        planetSize * 0.16, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 1 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 4;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 - planetSize * 0.35,
+    180 - planetSize * 0.2,
+    planetSize * 0.13,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+
+// Crater 2
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.3,
+        180 + planetSize * 0.25,
+        planetSize * 0.22, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 2 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 4;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 + planetSize * 0.3,
+    180 + planetSize * 0.25,
+    planetSize * 0.19,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+// Crater 3
+ctx.fillStyle = "#38106F";
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.1,
+        180 - planetSize * 0.4,
+        planetSize * 0.1, 0, Math.PI * 2);
+ctx.fill();
+// CRATER 3 INNER HIGHLIGHT!
+ctx.strokeStyle = "#9560E8";
+ctx.lineWidth = 3;
+
+ctx.beginPath();
+ctx.arc(
+    canvas.width / 2 + planetSize * 0.1,
+    180 - planetSize * 0.4,
+    planetSize * 0.07,
+    Math.PI * 0.15,
+    Math.PI * 0.85
+);
+ctx.stroke();
+// RIMS FOR CRATERS 2 AND 3!
+ctx.strokeStyle = "#8452C9";
+ctx.lineWidth = 5;
+
+// Crater 2 rim
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.3,
+        180 + planetSize * 0.25,
+        planetSize * 0.24, 0, Math.PI * 2);
+ctx.stroke();
+
+// Crater 3 rim
+ctx.beginPath();
+ctx.arc(canvas.width / 2 + planetSize * 0.1,
+        180 - planetSize * 0.4,
+        planetSize * 0.12, 0, Math.PI * 2);
+ctx.stroke();
+// PLANET SHADOW FOR A 3D LOOK!
+const planetShadow = ctx.createRadialGradient(
+    canvas.width / 2 - planetSize * 0.3,
+    180 - planetSize * 0.3,
+    planetSize * 0.1,
+    canvas.width / 2,
+    180,
+    planetSize
+);
+
+planetShadow.addColorStop(0, "rgba(255,255,255,0.12)");
+planetShadow.addColorStop(0.6, "rgba(0,0,0,0)");
+planetShadow.addColorStop(1, "rgba(15,0,45,0.75)");
+
+ctx.fillStyle = planetShadow;
+ctx.beginPath();
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.fill();
+// TINY CRATERS ON THE PLANET!
+for (let i = 0; i < 18; i++) {
+    const angle = i * 2.4;
+    const distance = Math.sqrt((i + 1) / 20) * planetSize * 0.8;
+
+    const craterX = canvas.width / 2 + Math.cos(angle) * distance;
+    const craterY = 180 + Math.sin(angle) * distance;
+    const craterRadius = planetSize * (0.015 + (i % 3) * 0.008);
+
+    ctx.fillStyle = "#6933AE";
+    ctx.beginPath();
+    ctx.arc(craterX, craterY, craterRadius, 0, Math.PI * 2);
+    ctx.fill();
+}
+// ROCKY PLANET SURFACE!
+for (let i = 0; i < 80; i++) {
+    const angle = i * 2.39996;
+    const distance = Math.sqrt((i + 0.5) / 80) * planetSize * 0.9;
+
+    const rockX = canvas.width / 2 + Math.cos(angle) * distance;
+    const rockY = 180 + Math.sin(angle) * distance;
+
+    const rockSize = planetSize * (0.003 + (i % 4) * 0.002);
+
+    ctx.fillStyle = i % 2 === 0 ? "#6D3AB8" : "#A67AF0";
+
+    ctx.beginPath();
+    ctx.arc(rockX, rockY, rockSize, 0, Math.PI * 2);
+    ctx.fill();
+}
+// GLOWING PURPLE ATMOSPHERE!
+ctx.save();
+
+ctx.shadowColor = "#B266FF";
+ctx.shadowBlur = 30;
+ctx.strokeStyle = "#D8A8FF";
+ctx.lineWidth = 3;
+
+ctx.beginPath();
+ctx.arc(canvas.width / 2, 180, planetSize, 0, Math.PI * 2);
+ctx.stroke();
+
+ctx.restore();
+// CAPTAIN PIXEL'S ROCKET!
+if (endingTime < 7500) {
+ctx.fillStyle = "#C0C0C0";
+ctx.beginPath();
+const rocketX = Math.min((endingTime - 3000) / 15, 450);
+ctx.moveTo(100 + rocketX, 170);
+ctx.lineTo(140 + rocketX, 190);
+ctx.lineTo(100 + rocketX, 210);
+ctx.closePath();
+ctx.fill();
+// GLOWING BLUE COCKPIT WINDOW!
+ctx.fillStyle = "#00D9FF";
+ctx.beginPath();
+ctx.arc(115 + rocketX, 190, 8, 0, Math.PI * 2);
+ctx.fill();
+// RED ROCKET FINS!
+ctx.fillStyle = "#FF3333";
+
+// Top fin
+ctx.beginPath();
+ctx.moveTo(105 + rocketX, 175);
+ctx.lineTo(90 + rocketX, 155);
+ctx.lineTo(125 + rocketX, 182);
+ctx.closePath();
+ctx.fill();
+
+// Bottom fin
+ctx.beginPath();
+ctx.moveTo(105 + rocketX, 205);
+ctx.lineTo(90 + rocketX, 225);
+ctx.lineTo(125 + rocketX, 198);
+ctx.closePath();
+ctx.fill();
+// ROCKET ENGINE FLAMES!
+const flameLength = 15 + Math.sin(Date.now() / 80) * 8;
+
+ctx.fillStyle = "#FF8800";
+ctx.beginPath();
+ctx.moveTo(100 + rocketX, 182);
+ctx.lineTo(100 - flameLength + rocketX, 190);
+ctx.lineTo(100 + rocketX, 198);
+ctx.closePath();
+ctx.fill();
+// SUPER-HOT YELLOW ENGINE FLAME!
+ctx.fillStyle = "#FFFF00";
+ctx.beginPath();
+ctx.moveTo(100 + rocketX, 186);
+ctx.lineTo(100 - flameLength * 0.65 + rocketX, 190);
+ctx.lineTo(100 + rocketX, 194);
+ctx.closePath();
+ctx.fill();
+}
+// WORLD 2 REVEAL!
+if (endingTime >= 7500) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 36px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("WORLD 2", canvas.width / 2, 360);
+    
+}
+}
+} else
+    if (cutscenePlaying) {
+        // Play the opening movie instead of the game
+        drawOpeningCutscene();
+    } else {
+        // Play the normal game
+        if (!gamePaused) {
+            update();
+            updateRocketParticles();
+        }
+
+        draw();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+
+
+
+// BACKGROUND MUSIC CONTROLS
+
+// BACKGROUND MUSIC CONTROLS
+const backgroundMusic = document.getElementById("backgroundMusic");
+// Music for Captain Pixel's opening movie
+const cutsceneMusic = new Audio("audio/cutscene-music.mp3");
+cutsceneMusic.volume = 0.5;
+cutsceneMusic.loop = true;
+backgroundMusic.volume = 0.5;
+
+let musicEnabled = true;
+
+// Start music after the first player interaction
+
+function startMusic() {
+    if (!musicEnabled) return;
+
+    if (cutscenePlaying) {
+        // Play Andromida during the opening movie
+        backgroundMusic.pause();
+
+        if (cutsceneMusic.paused) {
+            cutsceneMusic.play().catch(() => {
+                // Browser may require another interaction
+            });
+        }
+    } else {
+        // Switch to regular gameplay music
+        cutsceneMusic.pause();
+        cutsceneMusic.currentTime = 0;
+
+        if (backgroundMusic.paused) {
+            backgroundMusic.play().catch(() => {
+                // Browser may require another interaction
+            });
+        }
+    }
+}
+// END THE CUTSCENE AND SWITCH MUSIC
+function endCutscene() {
+    cutscenePlaying = false;
+
+    // Stop Andromida
+    cutsceneMusic.pause();
+    cutsceneMusic.currentTime = 0;
+
+    // Start regular gameplay music
+    startMusic();
+}
+
+// Start when the player presses a key
+document.addEventListener("keydown", startMusic);
+// WORLD 2 - PRESS F TO BLAST THE PORTAL ICE!
+document.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() !== "f") return;
+
+    // Only works in World 2, Level 7
+    if (currentLevel !== 7 || portalIceMelted) return;
+
+    // Captain Pixel needs ALL the Fire Orbs!
+    if (!coins.every(coin => coin.collected)) return;
+
+    // Must be close to the frozen portal
+    const distance = Math.abs(
+        (player.x + player.width / 2) - (finishFlag.x + 5)
+    );
+
+    if (distance > 120) return;
+
+    // FIRE BLAST!
+    portalFireBlasting = true;
+    portalFireStart = performance.now();
+    // The ice melts AFTER the fire blast finishes!
+portalIceMelted = false;
+});
+
+// MUSIC BUTTON INSIDE GAME CANVAS
+const musicButton = {
+    x: canvas.width - 135,
+    y: 12,
+    width: 120,
+    height: 36
+};
+
+// Click the button to toggle music
+canvas.addEventListener("click", (event) => {
+    const rect = canvas.getBoundingClientRect();
+
+    const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+    const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
+
+    if (
+        mouseX >= musicButton.x &&
+        mouseX <= musicButton.x + musicButton.width &&
+        mouseY >= musicButton.y &&
+        mouseY <= musicButton.y + musicButton.height
+    ) {
+        musicEnabled = !musicEnabled;
+
+        if (musicEnabled) {
+            startMusic();
+        } else {
+            backgroundMusic.pause();
+        }
+    } else {
+        startMusic();
+    }
+});
+
+ // CAPTAIN PIXEL: THE DIMENSIONAL INVASION
+ function drawOpeningCutscene() {
+     const elapsed = (performance.now() - cutsceneStart) / 1000;
+
+     // Each scene has its own part of the story
+     const scenes = [
+         {
+             title: "A GALAXY AT PEACE",
+             story: "For centuries, the stars lived in harmony."
+         },
+         {
+             title: "THE DIMENSIONAL RIFT",
+             story: "Until a mysterious portal tore open space..."
+         },
+         {
+             title: "THE INVASION",
+             story: "Zorp, Corp, and their evil clones arrived!"
+         },
+         {
+             title: "THE LAST HOPE",
+             story: "The galaxy needed one brave astronaut."
+         },
+         {
+             title: "CAPTAIN PIXEL",
+             story: "Chosen to stop the invaders and save the stars!"
+         },
+         {
+             title: "THE MISSION BEGINS",
+             story: "Defeat the aliens. Close the rift. Save the galaxy!"
+         }
+     ];
+
+     const sceneDuration = 5;
+     const sceneIndex = Math.floor(elapsed / sceneDuration);
+
+     // Start Level 1 when the movie ends
+     if (sceneIndex >= scenes.length) {
+         endCutscene();
+         return;
+     }
+
+     const sceneTime = elapsed % sceneDuration;
+     const scene = scenes[sceneIndex];
+
+     ctx.save();
+
+     // Deep space background
+     ctx.fillStyle = "#03091e";
+     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+     // Twinkling stars
+     for (let i = 0; i < 100; i++) {
+         const x = (i * 137 + 23) % canvas.width;
+         const y = (i * 83 + 41) % canvas.height;
+         const twinkle = 0.4 + Math.abs(
+             Math.sin(elapsed * 2 + i)
+         ) * 0.6;
+
+         ctx.globalAlpha = twinkle;
+         ctx.fillStyle = i % 5 === 0 ? "#42d6ff" : "#ffffff";
+         ctx.fillRect(x, y, 2, 2);
+     }
+
+     ctx.globalAlpha = 1;
+
+    // LITTLE DIMENSIONAL RIPS IN SPACE
+    if (sceneIndex >= 0) {
+        const rips = [
+            { x: 120, y: 155, size: 25 },
+            { x: 680, y: 120, size: 32 },
+            { x: 180, y: 290, size: 20 },
+            { x: 620, y: 310, size: 28 },
+            { x: 520, y: 165, size: 16 }
+        ];
+
+        rips.forEach((rip, i) => {
+            const flicker =
+                0.65 + Math.sin(elapsed * 3 + i * 2) * 0.25;
+
+            ctx.save();
+            ctx.globalAlpha = flicker;
+            ctx.strokeStyle = "#b56aff";
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "#a66bff";
+            ctx.shadowBlur = 12;
+
+            // Jagged crack through space
+            ctx.beginPath();
+            ctx.moveTo(rip.x, rip.y);
+            ctx.lineTo(rip.x + 5, rip.y + rip.size * 0.3);
+            ctx.lineTo(rip.x - 3, rip.y + rip.size * 0.55);
+            ctx.lineTo(rip.x + 7, rip.y + rip.size * 0.8);
+            ctx.lineTo(rip.x + 2, rip.y + rip.size);
+            ctx.stroke();
+
+            // Bright center of the crack
+            ctx.strokeStyle = "#e8c7ff";
+            ctx.lineWidth = 1;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
+
+            ctx.restore();
+        });
+    }
+
+     // Purple dimensional portal during the invasion
+     if (sceneIndex === 1 || sceneIndex === 2) {
+         const pulse = Math.sin(elapsed * 4) * 12;
+
+         ctx.shadowColor = "#a66bff";
+         ctx.shadowBlur = 35;
+
+         ctx.strokeStyle = "#a66bff";
+         ctx.lineWidth = 12;
+         ctx.beginPath();
+         ctx.ellipse(
+             400, 210,
+             95 + pulse, 120 + pulse,
+             0, 0, Math.PI * 2
+         );
+         ctx.stroke();
+
+         ctx.shadowBlur = 0;
+
+         ctx.fillStyle = "rgba(100, 30, 180, 0.35)";
+         ctx.beginPath();
+         ctx.ellipse(400, 210, 85, 110, 0, 0, Math.PI * 2);
+         ctx.fill();
+     }
+
+     // Zorp and Corp appear during the invasion
+     if (sceneIndex === 2) {
+         const bob = Math.sin(elapsed * 4) * 8;
+
+         // Zorp
+         ctx.fillStyle = "#a66bff";
+         ctx.fillRect(280, 230 + bob, 45, 45);
+
+         // Corp
+         ctx.fillStyle = "#ff7043";
+         ctx.fillRect(470, 230 - bob, 45, 45);
+
+         // Alien eyes
+         ctx.fillStyle = "#ffffff";
+         ctx.fillRect(289, 242 + bob, 10, 10);
+         ctx.fillRect(306, 242 + bob, 10, 10);
+         ctx.fillRect(479, 242 - bob, 10, 10);
+         ctx.fillRect(496, 242 - bob, 10, 10);
+     }
+
+     // Captain Pixel launches into space!
+     if (sceneIndex === 4 || sceneIndex === 5) {
+         const rocketY = 250 - Math.sin(elapsed * 2) * 12;
+
+         // Blue booster flame
+         ctx.fillStyle = "#42d6ff";
+         ctx.beginPath();
+         ctx.moveTo(390, rocketY + 32);
+         ctx.lineTo(400, rocketY + 75);
+         ctx.lineTo(410, rocketY + 32);
+         ctx.fill();
+
+         // Astronaut body
+         ctx.fillStyle = "#e8edf7";
+         ctx.fillRect(384, rocketY, 32, 35);
+
+         // Helmet
+         ctx.fillStyle = "#f1f5ff";
+         ctx.beginPath();
+         ctx.arc(400, rocketY, 20, 0, Math.PI * 2);
+         ctx.fill();
+
+         // Visor
+         ctx.fillStyle = "#153e70";
+         ctx.fillRect(388, rocketY - 8, 24, 14);
+
+         // Visor reflection
+         ctx.fillStyle = "#42d6ff";
+         ctx.fillRect(391, rocketY - 5, 12, 3);
+     }
+
+     // Fade text in and out
+     const fadeIn = Math.min(1, sceneTime / 0.8);
+     const fadeOut = Math.min(1, (sceneDuration - sceneTime) / 0.8);
+     ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut));
+
+     // Scene title
+     ctx.textAlign = "center";
+     ctx.fillStyle = "#42d6ff";
+     ctx.font = "bold 30px Arial";
+     ctx.fillText(scene.title, canvas.width / 2, 90);
+
+     // Story text
+     ctx.fillStyle = "#ffffff";
+     ctx.font = "18px Arial";
+     ctx.fillText(scene.story, canvas.width / 2, 385);
+
+     // Skip instructions
+     ctx.globalAlpha = 0.7;
+     ctx.fillStyle = "#a5eaff";
+     ctx.font = "14px Arial";
+     ctx.fillText(
+         "PRESS S TO SKIP",
+         canvas.width / 2,
+         430
+     );
+
+     ctx.restore();
+ }
+
+// Start the game after everything is ready
+gameLoop();
