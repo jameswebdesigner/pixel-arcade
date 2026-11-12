@@ -285,3 +285,365 @@ box-sizing: border-box;
         font-size: 22px;
     }
 }
+/* MEET THE DEVELOPER - SPACE CARD */
+.developer-section {
+    max-width: 650px;
+    margin: 50px auto;
+    padding: 30px;
+    text-align: center;
+
+    background: linear-gradient(135deg, #071124, #183b65);
+    border: 3px solid #42d6ff;
+    border-radius: 20px;
+
+    box-shadow: 0 0 25px #42d6ff66;
+}
+
+.developer-section h2 {
+    color: #42d6ff;
+    font-size: 28px;
+    text-shadow: 0 0 12px #42d6ff;
+}
+
+.developer-section p {
+    color: white;
+    font-size: 18px;
+    line-height: 1.7;
+}
+/* ANIMATED DEVELOPER SKILL BARS */
+
+.skill {
+    margin: 25px 0;
+    text-align: left;
+}
+
+.skill p {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.skill-bar {
+    width: 100%;
+    height: 20px;
+    background: #102440;
+    border: 2px solid #42d6ff;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.skill-fill {
+    width: 0;
+    height: 100%;
+    border-radius: 20px;
+
+    background: linear-gradient(
+        90deg,
+        #0077ff,
+        #42d6ff,
+        #9cf5ff
+    );
+
+    box-shadow: 0 0 15px #42d6ff;
+
+    animation: fillSkill 2s ease-out forwards;
+}
+
+@keyframes fillSkill {
+    from {
+        width: 0;
+    }
+
+    to {
+        width: var(--level);
+    }
+}
+/* JAMES'S NIGHTTIME PARK */
+
+body.developer-page {
+    background:
+        radial-gradient(
+            circle at 75% 15%,
+            #344b83 0%,
+            transparent 35%
+        ),
+        linear-gradient(
+            to bottom,
+            #070d24 0%,
+            #172b50 55%,
+            #193b36 100%
+        );
+
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+/* NIGHTTIME PARK SCENERY */
+
+.night-park {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* MOON */
+.park-moon {
+    position: absolute;
+    top: 7%;
+    right: 12%;
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    background: #fff5c4;
+    box-shadow: 0 0 45px #fff5c488;
+}
+
+/* TOWN */
+.park-town {
+    position: absolute;
+    bottom: 25%;
+    width: 100%;
+    height: 180px;
+}
+
+.park-house {
+    position: absolute;
+    bottom: 0;
+    width: 130px;
+    height: 110px;
+    background: #38465d;
+    border: 4px solid #202a40;
+    border-radius: 8px 8px 0 0;
+    box-shadow: inset 25px 35px #ffd97833;
+}
+
+.house-one { left: 8%; }
+.house-two { left: 45%; height: 145px; }
+.house-three { right: 8%; }
+
+/* GRASS */
+.park-ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 30%;
+    background: linear-gradient(#214e39, #102c25);
+}
+
+/* WALKING PATH */
+.park-path {
+    position: absolute;
+    bottom: -10%;
+    left: 35%;
+    width: 30%;
+    height: 45%;
+    background: #777b85;
+    clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+}
+
+/* TREES */
+.park-tree {
+    position: absolute;
+    font-size: 110px;
+    bottom: 17%;
+    filter: brightness(0.65);
+}
+
+.tree-one { left: 3%; }
+.tree-two { right: 4%; }
+.tree-three { left: 72%; font-size: 85px; }
+
+/* STREETLIGHTS */
+.park-lamp {
+    position: absolute;
+    bottom: 19%;
+    font-size: 48px;
+    filter: drop-shadow(0 0 20px #ffe68a);
+}
+
+.lamp-one { left: 28%; }
+.lamp-two { right: 28%; }
+
+/* KEEP WEBSITE CONTENT ABOVE THE PARK */
+body.developer-page > h1,
+body.developer-page > section,
+body.developer-page > button {
+    position: relative;
+    z-index: 1;
+}
+/* NIGHTTIME PARK - HOUSE UPGRADES */
+
+/* TRIANGLE ROOFS */
+.park-house::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: -55px;
+    width: 0;
+    height: 0;
+
+    border-left: 75px solid transparent;
+    border-right: 75px solid transparent;
+    border-bottom: 55px solid #252c42;
+}
+
+/* GLOWING WINDOWS */
+.park-house::after {
+    content: "";
+    position: absolute;
+    top: 25px;
+    left: 20px;
+
+    width: 25px;
+    height: 30px;
+    background: #ffe08a;
+
+    border: 3px solid #202a40;
+    border-radius: 4px;
+
+    box-shadow:
+        55px 0 0 -3px #ffe08a,
+        0 0 15px #ffe08a66;
+}
+/* TWINKLING NIGHT SKY */
+
+.park-stars span {
+    position: absolute;
+    color: #fff5c4;
+    font-size: 16px;
+    animation: parkTwinkle 2s infinite alternate;
+}
+
+.park-stars span:nth-child(1) { top: 8%; left: 10%; }
+.park-stars span:nth-child(2) { top: 15%; left: 25%; animation-delay: .5s; }
+.park-stars span:nth-child(3) { top: 5%; left: 45%; animation-delay: 1s; }
+.park-stars span:nth-child(4) { top: 22%; left: 65%; animation-delay: .8s; }
+.park-stars span:nth-child(5) { top: 12%; left: 85%; animation-delay: 1.5s; }
+.park-stars span:nth-child(6) { top: 30%; left: 15%; animation-delay: .3s; }
+.park-stars span:nth-child(7) { top: 35%; left: 55%; animation-delay: 1.2s; }
+.park-stars span:nth-child(8) { top: 28%; left: 92%; animation-delay: .7s; }
+
+@keyframes parkTwinkle {
+    from {
+        opacity: 0.2;
+        transform: scale(0.6);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.3);
+        text-shadow: 0 0 12px #fff5c4;
+    }
+}
+/* NO SHOOTING STARS IN THE NIGHTTIME PARK */
+body.developer-page .shooting-star {
+    display: none !important;
+}
+/* GLOWING FIREFLIES IN THE NIGHTTIME PARK */
+
+.park-fireflies span {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #baff70;
+
+    box-shadow:
+        0 0 10px #baff70,
+        0 0 20px #70ff55,
+        0 0 30px #70ff5588;
+
+    animation: fireflyFloat 5s ease-in-out infinite alternate;
+}
+
+/* DIFFERENT STARTING POSITIONS */
+.park-fireflies span:nth-child(1) {
+    top: 55%;
+    left: 12%;
+    animation-delay: 0s;
+}
+
+.park-fireflies span:nth-child(2) {
+    top: 68%;
+    left: 25%;
+    animation-delay: 1s;
+}
+
+.park-fireflies span:nth-child(3) {
+    top: 60%;
+    left: 45%;
+    animation-delay: 2s;
+}
+
+.park-fireflies span:nth-child(4) {
+    top: 72%;
+    left: 65%;
+    animation-delay: .5s;
+}
+
+.park-fireflies span:nth-child(5) {
+    top: 50%;
+    left: 82%;
+    animation-delay: 1.5s;
+}
+
+.park-fireflies span:nth-child(6) {
+    top: 78%;
+    left: 90%;
+    animation-delay: 2.5s;
+}
+
+/* FIREFLY MOVEMENT */
+@keyframes fireflyFloat {
+    0% {
+        transform: translate(0, 0);
+        opacity: 0.2;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(35px, -45px);
+        opacity: 0.4;
+    }
+}
+/* NIGHTTIME PARK BENCH */
+.park-bench {
+    position: absolute;
+    bottom: 12%;
+    left: 15%;
+    font-size: 65px;
+    transform: scaleX(-1);
+    filter: brightness(0.75);
+}
+/* INTERACTIVE PURPLE MOON */
+
+.park-moon {
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.6s, box-shadow 0.6s;
+}
+
+.park-moon.purple-moon {
+    background: #c084fc;
+
+    box-shadow:
+        0 0 30px #a855f7,
+        0 0 70px #9333ea,
+        0 0 110px #7e22ce;
+}
+/* PURPLE MOON MAGIC - FIREFLIES */
+
+body.developer-page:has(.purple-moon)
+.park-fireflies span {
+    background: #d8a4ff;
+
+    box-shadow:
+        0 0 10px #c084fc,
+        0 0 20px #a855f7,
+        0 0 35px #9333ea;
+}

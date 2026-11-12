@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meet the Developer | Pixel Arcade</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="developer-page"></body>
+<!-- NIGHTTIME TOWN PARK -->
+<div class="night-park" aria-hidden="true">
+
+    <div class="park-moon" onclick="toggleMoon()"
+     title="Click me to change the moon!"></div>
+    <!-- GLOWING PARK FIREFLIES -->
+<div class="park-fireflies">
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+</div>
+<!-- TWINKLING PARK STARS -->
+<div class="park-stars">
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+    <span>✦</span>
+</div>
+    <div class="park-town">
+        <div class="park-house house-one"></div>
+        <div class="park-house house-two"></div>
+        <div class="park-house house-three"></div>
+    </div>
+
+    <div class="park-ground"></div>
+    <div class="park-path"></div>
+    <!-- PARK BENCH -->
+<div class="park-bench">🪑</div>
+
+    <div class="park-tree tree-one">🌳</div>
+    <div class="park-tree tree-two">🌳</div>
+    <div class="park-tree tree-three">🌲</div>
+
+    <div class="park-lamp lamp-one">💡</div>
+    <div class="park-lamp lamp-two">💡</div>
+
+</div>
+    <!-- SHOOTING STARS -->
+    <div class="shooting-star star1"></div>
+    <div class="shooting-star star2"></div>
+    <div class="shooting-star star3"></div>
+
+    <h1>👨‍🚀 MEET THE DEVELOPER</h1>
+
+    <section class="developer-section">
+        <h2>HEY! I'M JAMES! 🚀</h2>
+
+        <p>
+            I'm a young game developer who loves coding,
+            designing websites, and creating awesome adventures!
+        </p>
+
+        <p>
+            I created Pixel Arcade and Captain Pixel,
+            and I'm always working on something new!
+        </p>
+
+        <p>🌟 This is only the beginning!</p>
+    </section>
+<!-- MY PROJECTS -->
+<section class="developer-section">
+    <h2>🎮 MY PROJECTS</h2>
+
+    <h3>🚀 Captain Pixel</h3>
+
+    <p>
+        My very own space platformer!
+        Explore different worlds, collect power-ups,
+        defeat enemies, and discover new adventures!
+    </p>
+
+    <a href="platformer.html">
+        <button type="button">🎮 PLAY CAPTAIN PIXEL</button>
+    </a>
+</section>
+<!-- MY CODING SKILLS -->
+<section class="developer-section">
+    <!-- MY CODING SKILLS -->
+<section class="developer-section">
+    <h2>💻 MY CODING SKILLS</h2>
+
+    <div class="skill">
+        <p>🌐 HTML</p>
+        <div class="skill-bar">
+            <div class="skill-fill" style="--level: 85%"></div>
+        </div>
+    </div>
+
+    <div class="skill">
+        <p>🎨 CSS</p>
+        <div class="skill-bar">
+            <div class="skill-fill" style="--level: 75%"></div>
+        </div>
+    </div>
+
+    <div class="skill">
+        <p>⚡ JavaScript</p>
+        <div class="skill-bar">
+            <div class="skill-fill" style="--level: 70%"></div>
+        </div>
+    </div>
+
+    <div class="skill">
+        <p>🎮 Game Design</p>
+        <div class="skill-bar">
+            <div class="skill-fill" style="--level: 90%"></div>
+        </div>
+    </div>
+    <!-- REPLAY SKILL ANIMATION -->
+<button type="button" onclick="resetSkills()">
+    🔄 REPLAY ANIMATION
+</button>
+</section>
+    <button onclick="window.location.href='index.html'">
+        🏠 BACK TO HOME
+    </button>
+<script>
+function resetSkills() {
+    const bars = document.querySelectorAll(".skill-fill");
+
+    bars.forEach(bar => {
+        bar.style.animation = "none";
+    });
+
+    // Restart all animations
+    void document.body.offsetWidth;
+
+    bars.forEach(bar => {
+        bar.style.animation = "fillSkill 2s ease-out forwards";
+    });
+}
+</script>
+<script>
+function toggleMoon() {
+    const moon = document.querySelector(".park-moon");
+    moon.classList.toggle("purple-moon");
+}
+</script>
+</body>
+</html>
