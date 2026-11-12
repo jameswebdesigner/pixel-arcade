@@ -261,7 +261,66 @@ const corp = {
 
 // Remember which keys are pressed
 const keys = {};
+// MOBILE TOUCH CONTROLS - LEFT AND RIGHT!
+function setupMoveButton(buttonId, keyCode) {
+    const button = document.getElementById(buttonId);
+    if (!button) return;
 
+    button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        button.setPointerCapture(event.pointerId);
+        keys[keyCode] = true;
+    });
+
+    function releaseButton(event) {
+        event.preventDefault();
+        keys[keyCode] = false;
+    }
+
+    button.addEventListener("pointerup", releaseButton);
+    button.addEventListener("pointercancel", releaseButton);
+    button.addEventListener("lostpointercapture", () => {
+        keys[keyCode] = false;
+    });
+}
+
+setupMoveButton("moveLeft", "ArrowLeft");
+setupMoveButton("moveRight", "ArrowRight");
+// MOBILE TOUCH CONTROLS - JUMP!
+const jumpButton = document.getElementById("jumpButton");
+
+if (jumpButton) {
+    jumpButton.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        keys["Space"] = true;
+    });
+
+    function stopJump(event) {
+        event.preventDefault();
+        keys["Space"] = false;
+    }
+
+    jumpButton.addEventListener("pointerup", stopJump);
+    jumpButton.addEventListener("pointercancel", stopJump);
+    jumpButton.addEventListener("pointerleave", stopJump);
+}
+// MOBILE TOUCH CONTROLS - FIRE!
+const fireButton = document.getElementById("fireButton");
+
+if (fireButton) {
+    fireButton.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+
+        // Use the same F key as the keyboard!
+        document.dispatchEvent(
+            new KeyboardEvent("keydown", {
+                code: "KeyF",
+                key: "f",
+                bubbles: true
+            })
+        );
+    });
+}
 document.addEventListener("keydown", (event) => {
     if (["ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
         event.preventDefault();

@@ -188,10 +188,100 @@ body {
 #gameCanvas {
     display: block;
     margin: 20px auto;
-    max-width: 95%;
-    height: auto;
+   /* MOBILE FRIENDLY GAME SCREEN */
+width: 800px;
+max-width: 95%;
+height: auto;
+aspect-ratio: 16 / 9;
+box-sizing: border-box;
     background: #071124;
     border: 3px solid #42d6ff;
     border-radius: 12px;
     box-shadow: 0 0 25px #42d6ff55;
+}
+/* CAPTAIN PIXEL MOBILE CONTROLS */
+#mobileControls {
+    display: none;
+    width: 95%;
+    max-width: 800px;
+    margin: 12px auto;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.moveButtons,
+.actionButtons {
+    display: flex;
+    gap: 10px;
+}
+
+#mobileControls button {
+    width: 65px;
+    height: 65px;
+    border: 3px solid #42d6ff;
+    border-radius: 18px;
+    background: #183b65;
+    color: white;
+    font-size: 26px;
+    font-weight: bold;
+    box-shadow: 0 0 15px #42d6ff66;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#mobileControls button:active {
+    background: #ff8833;
+    border-color: #ffcc44;
+}
+
+/* Show controls on phones and tablets */
+@media (pointer: coarse) {
+    #mobileControls {
+        display: flex;
+    }
+}
+/* MOBILE PHONE ROTATION MESSAGE */
+#rotateTip {
+    display: none;
+    color: #ffdd44;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    padding: 12px;
+    margin: 10px auto;
+    max-width: 90%;
+    background: #183b65;
+    border: 2px solid #42d6ff;
+    border-radius: 12px;
+}
+
+/* Show the message only on narrow portrait screens */
+@media (max-width: 600px) and (orientation: portrait) {
+    #rotateTip {
+        display: block;
+    }
+}
+/* CAPTAIN PIXEL - MOBILE LANDSCAPE MODE */
+@media (max-height: 500px) and (orientation: landscape) {
+
+    #gameCanvas {
+        width: auto;
+        max-width: 96vw;
+        max-height: 65vh;
+        height: auto;
+    }
+
+    #mobileControls {
+        width: 96%;
+        max-width: 800px;
+        margin: 5px auto;
+    }
+
+    #mobileControls button {
+        width: 52px;
+        height: 52px;
+        font-size: 22px;
+    }
 }
