@@ -1071,11 +1071,16 @@ ctx.translate(
 
     if (captainWalking) {
         
-const captainWobble =
-    Math.sin(Date.now() / 130) * 0.18;
+// CAPTAIN PIXEL'S NEW WALKING SINE WAVES!
+const walkTime = Date.now() / 1000;
 
+// Gentle side-to-side rotation
+const captainWobble =
+    Math.sin(walkTime * 7) * 0.10;
+
+// Faster squish with a phase offset
 const captainSquish =
-    Math.sin(Date.now() / 130) * 0.16;
+    Math.sin(walkTime * 14 + Math.PI / 2) * 0.12;
 
 
         // Keep his feet planted while he wobbles
@@ -1092,7 +1097,24 @@ const captainSquish =
 
         ctx.translate(-16, -32);
     }
+// CAPTAIN PIXEL'S IDLE BREATHING ANIMATION
+if (!captainWalking && !player.jumping) {
+    const idleTime = Date.now() / 1000;
 
+    // Slow, gentle breathing
+    const idleBreath = Math.sin(idleTime * 2) * 0.1;
+    // Gentle side-to-side idle rotation
+const idleTurn = Math.sin(idleTime * 1.3 + Math.PI / 3) * 0.05;
+
+    // Stretch slightly taller, then relax
+    ctx.translate(16, 32);
+    ctx.rotate(idleTurn);
+    ctx.scale(
+        1 - idleBreath * 0.4,
+        1 + idleBreath
+    );
+    ctx.translate(-16, -32);
+}
     
     // DUAL ROCKET BOOSTERS!
     if (player.jumping) {
@@ -1279,8 +1301,14 @@ ctx.translate(
 );
 } else {
     // BORP'S HAPPY BEAN DANCE!
-const borpWobble = Math.sin(Date.now() / 350) * 0.08;
-const borpSquish = Math.sin(Date.now() / 180) * 0.12;
+// BORP'S NEW SINE WAVE BEAN DANCE!
+const danceTime = Date.now() / 1000;
+
+// Gentle rotation from side to side
+const borpWobble = Math.sin(danceTime * 3) * 0.12;
+
+// Smooth rhythmic squishing
+const borpSquish = Math.sin(danceTime * 3 + Math.PI / 2) * 0.15;
 
 ctx.translate(
     borp.x + borp.width / 2,
@@ -1799,8 +1827,16 @@ if (currentLevel === 3) {
     
     // ZORP'S WOBBLING BODY!
     // Smooth alien waddle
-const zorpWobble = Math.sin(Date.now() / 350) * 0.08;
-const zorpSquish = Math.sin(Date.now() / 180) * 0.12;
+// ZORP'S NEW SINE WAVE DANCE!
+const zorpTime = Date.now() / 1000;
+
+// Slow, gentle rotation
+const zorpWobble =
+    Math.sin(zorpTime * 3.5) * 0.10;
+
+// Faster squish with a phase offset
+const zorpSquish =
+    Math.sin(zorpTime * 7 + Math.PI / 2) * 0.14;
     // Start moving the WHOLE alien
    ctx.save();
 
@@ -1890,8 +1926,16 @@ ctx.restore();
 if (currentLevel === 4 && !corp.defeated) {
 
     // CORP'S WOBBLY WALK!
-    const corpWobble = Math.sin(Date.now() / 350) * 0.08;
-    const corpSquish = Math.sin(Date.now() / 180) * 0.12;
+    // CORP'S JELLYBEAN SINE WAVE DANCE!
+const corpTime = Date.now() / 1000;
+
+// Gentle rocking with a phase offset
+const corpWobble =
+    Math.sin(corpTime * 2 + Math.PI / 3) * 0.09;
+
+// Fast, bouncy squish and stretch
+const corpSquish =
+    Math.sin(corpTime * 4) * 0.18;
 
     ctx.save();
 

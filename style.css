@@ -647,3 +647,102 @@ body.developer-page:has(.purple-moon)
         0 0 20px #a855f7,
         0 0 35px #9333ea;
 }
+/* ============================
+   FOREST Q - WEBSITE THEME
+============================ */
+
+body.forest-q-page {
+    background: linear-gradient(
+        180deg,
+        #07140d 0%,
+        #102b1b 50%,
+        #06120b 100%
+    );
+    color: #e1f5df;
+    min-height: 100vh;
+    text-align: center;
+}
+
+/* MAIN TITLE AREA */
+.forest-hero {
+    padding: 100px 20px 80px;
+    background: radial-gradient(
+        ellipse at center,
+        #285c35 0%,
+        #07140d 75%
+    );
+}
+
+.forest-hero h1 {
+    color: #b5ff8a;
+    font-size: clamp(42px, 8vw, 85px);
+    text-shadow: 0 0 25px #67ff7088;
+}
+
+.forest-hero p {
+    font-size: 22px;
+    color: #d5f5d0;
+}
+
+.forest-hero span {
+    display: inline-block;
+    margin-top: 25px;
+    padding: 10px 25px;
+    border: 2px solid #a5ff88;
+    border-radius: 30px;
+    color: #a5ff88;
+    letter-spacing: 3px;
+}
+
+/* SCROLLABLE CONTENT */
+.forest-content {
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.forest-section {
+    margin: 50px 0;
+    padding: 35px;
+    background: #102719;
+    border: 2px solid #3c8050;
+    border-radius: 20px;
+    box-shadow: 0 0 20px #1a6b3333;
+}
+
+.forest-section h2 {
+    color: #a5ff88;
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+.forest-section p {
+    color: #e1f5df;
+    font-size: 18px;
+    line-height: 1.8;
+}
+
+/* FOREST Q BUTTONS */
+body.forest-q-page button {
+    background: #245a35;
+    color: white;
+    border: 2px solid #a5ff88;
+    border-radius: 12px;
+    padding: 15px 25px;
+    margin: 15px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+body.forest-q-page button:hover {
+    background: #39834c;
+    box-shadow: 0 0 20px #a5ff8888;
+    transform: translateY(-3px);
+}
+/* GAME LIBRARY BUTTON SPACING */
+
+.game-library .game-card button {
+    margin: 18px 10px;
+    padding: 15px 25px;
+}

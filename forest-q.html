@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Q | Pixel Arcade</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="forest-q-page">
+
+    <header class="forest-hero">
+        <h1>🏹 FOREST Q 🌲</h1>
+        <p>Lost in the forest. Find your way out.</p>
+        <span>COMING SOON</span>
+    </header>
+
+    <main class="forest-content">
+
+        <section class="forest-section">
+            <h2>📖 THE STORY</h2>
+            <p>
+                An archer has become lost deep inside
+                a mysterious forest.
+
+                His only goal is to find the exit.
+
+                But the forest is full of dangers,
+                secrets, and unexpected challenges.
+            </p>
+        </section>
+
+        <section class="forest-section">
+            <h2>🌲 EXPLORE THE FOREST</h2>
+            <p>
+                Every adventure is different!
+
+                Explore randomly generated rooms,
+                discover new pathways, and search
+                for a way out.
+            </p>
+        </section>
+
+        <section class="forest-section">
+            <h2>🧩 PUZZLES & ENEMIES</h2>
+            <p>
+                Solve puzzles to progress through
+                the forest and battle enemies that
+                become more difficult over time.
+            </p>
+        </section>
+
+        <section class="forest-section">
+            <h2>🎨 CONCEPT ART</h2>
+            <p>
+                Take a look behind the scenes as
+                Forest Q comes to life!
+            </p>
+            <p>Artwork coming soon...</p>
+        </section>
+
+        <section class="forest-section">
+            <h2>🔐 SECRET EARLY ACCESS</h2>
+            <p>
+                Have a special access code?
+                Enter it to try Forest Q before release!
+            </p>
+
+            <button type="button" onclick="document.getElementById('forest-code-box').hidden = false">
+    🔑 ENTER ACCESS CODE
+</button>
+
+<div id="forest-code-box" hidden>
+    <h3>🌲 SECRET FOREST ACCESS 🔐</h3>
+    <p>Enter your code to unlock Forest Q!</p>
+
+    <input type="text" id="forest-secret-input"
+           placeholder="Enter secret code">
+
+    <button onclick="enterForestCode()">🏹 UNLOCK</button>
+
+    <p id="forest-code-message"></p>
+</div>
+        </section>
+
+    </main>
+
+    <button onclick="window.location.href='games.html'">
+        ⬅ BACK TO GAME LIBRARY
+    </button>
+
+    <script>
+function enterForestCode() {
+    const input = document.getElementById("forest-secret-input");
+    const message = document.getElementById("forest-code-message");
+
+    const code = input.value.trim().toUpperCase();
+
+    if (code === "JAMES123456789") {
+        window.location.href = "forest-q-game.html";
+    } else if (code === "") {
+        message.textContent = "🌲 Please enter a secret code!";
+        message.style.color = "#ffd966";
+    } else {
+        message.textContent = "🔒 Incorrect code! Try again.";
+        message.style.color = "#ff7777";
+    }
+}   
+</script>
+</body>
+</html>
