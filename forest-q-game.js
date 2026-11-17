@@ -60,6 +60,215 @@ window.addEventListener("mouseup", (event) => {
 
     lastShotTime = Date.now();
 });
+// SNIP'S RAINBOW COLORS
+const snipColors = [
+    "#ff3030", // Red
+    "#ff9500", // Orange
+    "#ffe135", // Yellow
+    "#30c850", // Green
+    "#3080ff", // Blue
+    "#673ab7", // Indigo
+    "#a040e8"  // Violet
+];
+// DRAW SNIP THE FLOWER ENEMY
+function drawSnip(snip) {
+    const time = performance.now() / 1000;
+
+    ctx.save();
+    ctx.translate(snip.x, snip.y);
+
+    // Animated root legs
+    const wiggle = snip.isMoving
+    ? Math.sin(time * 8) * 4
+    : 0;
+
+    ctx.strokeStyle = "#79502d";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(-5, 13);
+    ctx.lineTo(-12 + wiggle, 28);
+    ctx.moveTo(5, 13);
+    ctx.lineTo(12 - wiggle, 28);
+    ctx.stroke();
+
+    // Six colorful flower petals
+    for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI * 2) / 6;
+
+        ctx.save();
+        ctx.rotate(angle);
+
+        ctx.fillStyle = snip.color;
+        ctx.strokeStyle = "#24323b";
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.ellipse(0, -13, 8, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // Flower face
+    ctx.fillStyle = "#f5dca0";
+    ctx.strokeStyle = "#24323b";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Eyes
+    ctx.fillStyle = "#192c35";
+    ctx.beginPath();
+    ctx.arc(-5, -2, 2.5, 0, Math.PI * 2);
+    ctx.arc(5, -2, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// SNIP ENEMIES
+const snips = [];
+// SNIP'S FLOWER SEEDS
+const snipSeeds = [];
+
+// Shoot one seed toward Forest Blob
+function shootSnipSeed(snip) {
+    const angle = Math.atan2(
+        player.y - snip.y,
+        player.x - snip.x
+    );
+
+    snipSeeds.push({
+        x: snip.x,
+        y: snip.y,
+        room: snip.room,
+        angle: angle,
+        speed: 4,
+        radius: 5,
+        color: "#79502d"
+    });
+}
+
+// Create a new Snip
+function spawnSnip(x, y, room) {
+        // Find a safe place away from trees
+    const trees = forestRooms[room].trees;
+
+    for (let attempt = 0; attempt < 100; attempt++) {
+        const tooClose = trees.some(([treeX, treeY]) =>
+            Math.hypot(x - treeX, y - treeY) < 55
+        );
+
+        if (!tooClose) break;
+
+        // Try another spot inside the forest
+        x = 40 + Math.random() * (canvas.width - 80);
+        y = 40 + Math.random() * (canvas.height - 80);
+    }
+    const snip = {
+        x: x,
+        y: y,
+        room: room,
+        color: randomSnipColor(),
+health: 2,
+hitTime: 0,
+isMoving: false,
+lastMoveTime: performance.now(),
+moveStartTime: 0,
+moveDuration: 700,
+moveDirectionX: 0,
+moveDirectionY: 0,
+speed: 3
+    };
+
+    snips.push(snip);
+}
+// SNIP MOVEMENT AI
+function updateSnips() {
+    const now = performance.now();
+
+    snips.forEach(snip => {
+        // Only update Snips in the current room
+        if (snip.room !== currentRoom) return;
+
+        // Start moving every 5 seconds
+        if (!snip.isMoving && now - snip.lastMoveTime >= 1000) {
+            const angleToPlayer = Math.atan2(
+                player.y - snip.y,
+                player.x - snip.x
+            );
+
+            // Random direction generally toward the player
+            const randomAngle =
+                angleToPlayer + (Math.random() - 0.5) * 1.5;
+
+            snip.moveDirectionX = Math.cos(randomAngle);
+            snip.moveDirectionY = Math.sin(randomAngle);
+
+            snip.isMoving = true;
+            snip.moveStartTime = now;
+        }
+
+        // Move Snip
+        if (snip.isMoving) {
+            if (now - snip.moveStartTime < snip.moveDuration) {
+                // Calculate Snip's next position
+const nextX = snip.x + snip.moveDirectionX * snip.speed;
+const nextY = snip.y + snip.moveDirectionY * snip.speed;
+
+// Keep Snip inside the forest room
+const margin = 30;
+// Check whether Snip would hit a tree
+const trees = forestRooms[snip.room].trees;
+
+const hitsTree = trees.some(([treeX, treeY]) => {
+    const distance = Math.hypot(
+        nextX - treeX,
+        nextY - treeY
+    );
+
+    return distance < 38;
+});
+
+if (
+    nextX >= margin &&
+    nextX <= canvas.width - margin &&
+    nextY >= margin &&
+    nextY <= canvas.height - margin &&
+    !hitsTree
+) {
+    snip.x = nextX;
+    snip.y = nextY;
+} else {
+    // Snip bumped into a wall!
+    snip.isMoving = false;
+    snip.lastMoveTime = now;
+}
+            } else {
+    snip.isMoving = false;
+    snip.lastMoveTime = now;
+
+    // Fire one seed when Snip stops moving!
+    shootSnipSeed(snip);
+}
+        }
+    });
+}
+
+// One Snip in each forest room
+// Pick one solid color when a Snip spawns
+function randomSnipColor() {
+    return snipColors[
+        Math.floor(Math.random() * snipColors.length)
+    ];
+ 
+}
 
 function drawForest() {
     // Bright cartoon grass
@@ -156,18 +365,14 @@ function drawDodgeAfterimages(x, y) {
         // Older ghosts are more transparent
         ctx.globalAlpha = 0.12 + (4 - i) * 0.1;
 
-        // Blue Blob's square body
-        ctx.fillStyle = "#3498f5";
-        ctx.beginPath();
-        ctx.roundRect(-18, -18, 36, 36, 5);
-        ctx.fill();
-
-        // Antennae
-        ctx.fillRect(-12, -26, 7, 10);
-        ctx.fillRect(5, -26, 7, 10);
+        // Round forest blob ghost
+ctx.fillStyle = "#008d4b";
+ctx.beginPath();
+ctx.arc(0, 0, 22, 0, Math.PI * 2);
+ctx.fill();
 
         // Ghost eyes
-        ctx.fillStyle = "white";
+        ctx.fillStyle = "black";
         ctx.fillRect(-11, -7, 8, 8);
         ctx.fillRect(4, -7, 8, 8);
 
@@ -269,7 +474,8 @@ ctx.translate(-x, -y);
 const footSwing = walking ? Math.sin(time * 12) * 5 : 0;
 
 ctx.fillStyle = "#000000";
-
+// Dark greenish-blue legs
+ctx.fillStyle = "#000000";
 // Left leg
 ctx.fillRect(
     x - 14,
@@ -286,29 +492,26 @@ ctx.fillRect(
     17 - footSwing
 );
 
-    // Two square antennae
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(x - 15, y - 30, 6, 12);
-    ctx.fillRect(x + 9, y - 30, 6, 12);
 
-    ctx.fillStyle = "#58b5ff";
-    ctx.fillRect(x - 19, y - 36, 14, 10);
-    ctx.fillRect(x + 5, y - 36, 14, 10);
 
-    // Soft blue SQUARE blob body — not metal!
-    ctx.fillStyle = "#3498f5";
-    ctx.beginPath();
-    ctx.roundRect(x - 22, y - 20, 44, 40, 5);
-    ctx.fill();
-    ctx.stroke();
+    // DARK GREENISH-BLUE ROUND BLOB!
+ctx.fillStyle = "#008d4b";
+ctx.strokeStyle = "#000000";
+ctx.lineWidth = 4;
+
+ctx.beginPath();
+ctx.arc(x, y, 22, 0, Math.PI * 2);
+ctx.fill();
+ctx.stroke();
 
     
-    // Big white eyes
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(x - 9, y - 3, 7, 0, Math.PI * 2);
-    ctx.arc(x + 9, y - 3, 7, 0, Math.PI * 2);
-    ctx.fill();
+    // Cute black blob eyes
+ctx.fillStyle = "#000000";
+ctx.beginPath();
+ctx.arc(x - 9, y - 3, 6, 0, Math.PI * 2);
+ctx.arc(x + 9, y - 3, 6, 0, Math.PI * 2);
+ctx.fill();
+
 
     // Eyes follow the mouse!
 const eyeDX = mouse.x - x;
@@ -319,11 +522,25 @@ const eyeAngle = Math.atan2(eyeDY, eyeDX);
 const pupilX = Math.cos(eyeAngle) * 3;
 const pupilY = Math.sin(eyeAngle) * 3;
 
-ctx.fillStyle = "#000000";
+// Moving white eye highlights
+ctx.fillStyle = "white";
 ctx.beginPath();
 
-ctx.arc(x - 9 + pupilX, y - 3 + pupilY, 3, 0, Math.PI * 2);
-ctx.arc(x + 9 + pupilX, y - 3 + pupilY, 3, 0, Math.PI * 2);
+ctx.arc(
+    x - 9 + pupilX,
+    y - 3 + pupilY,
+    2,
+    0,
+    Math.PI * 2
+);
+
+ctx.arc(
+    x + 9 + pupilX,
+    y - 3 + pupilY,
+    2,
+    0,
+    Math.PI * 2
+);
 
 ctx.fill();
     
@@ -424,6 +641,34 @@ const player = {
     y: 250,
     speed: 3
 };
+// FOREST BLOB HEALTH
+let playerHealth = 2;
+const playerMaxHealth = 2;
+
+// Draw hearts in the top-left corner
+function drawHealth() {
+    ctx.save();
+
+    ctx.font = "32px Arial";
+    ctx.textBaseline = "top";
+
+    for (let i = 0; i < playerMaxHealth; i++) {
+        const x = 15 + i * 40;
+        const y = 15;
+
+        ctx.fillText(
+            playerHealth >= i + 1
+    ? "❤️"
+    : playerHealth > i
+        ? "💔"
+        : "🖤",
+            x,
+            y
+        );
+    }
+
+    ctx.restore();
+}
 // BLUE BLOB DODGE ROLL
 let isDodging = false;
 let dodgeStartTime = 0;
@@ -476,6 +721,9 @@ const forestRooms = [
         trees: generateRandomTrees()
     }
 ];
+// Spawn Snips AFTER the forest rooms are created
+spawnSnip(350, 250, 1);
+spawnSnip(550, 250, 2);
 // Remember which keys are being held
 const keys = {};
 
@@ -625,7 +873,35 @@ const maxAttempts = 200;
 
     return trees;
 }
+// GAME OVER SYSTEM
+let gameOver = false;
+
+function drawGameOver() {
+    // Darken the forest
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.textAlign = "center";
+
+    // Game Over title
+    ctx.fillStyle = "#ff7777";
+    ctx.font = "bold 60px Arial";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 60);
+
+    // Message
+    ctx.fillStyle = "#d4f5b0";
+    ctx.font = "24px Arial";
+    ctx.fillText("THE FOREST WON!", canvas.width / 2, canvas.height / 2);
+
+    // Restart instructions
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Press R to Play Again", canvas.width / 2, canvas.height / 2 + 60);
+
+    ctx.textAlign = "left";
+}
 function gameLoop() {
+    updateSnips();
     // Move Blue Blob
     // BLUE BLOB MOVEMENT AND DODGE ROLL
 if (isDodging) {
@@ -723,14 +999,27 @@ objects.push({
     x: player.x,
     y: player.y
 });
+// Add Snips from the current room
+snips.forEach(snip => {
+    if (snip.room === currentRoom) {
+        objects.push({
+            type: "snip",
+            x: snip.x,
+            y: snip.y,
+            snip: snip
+        });
+    }
+});
 
 // Draw objects from back to front
 objects.sort((a, b) => a.y - b.y);
 
 objects.forEach(obj => {
     if (obj.type === "tree") {
-        drawTree(obj.x, obj.y);
-    } else {
+    drawTree(obj.x, obj.y);
+} else if (obj.type === "snip") {
+    drawSnip(obj.snip);
+} else {
     drawPlayer(obj.x, obj.y);
 
     // BOW RECHARGE BAR
@@ -753,14 +1042,118 @@ objects.forEach(obj => {
     );
 }
 });
+// UPDATE AND DRAW SNIP'S FLOWER SEEDS
+for (let i = snipSeeds.length - 1; i >= 0; i--) {
+    const seed = snipSeeds[i];
+
+    // Only update seeds in the current room
+    if (seed.room !== currentRoom) continue;
+
+    // Move the seed
+    seed.x += Math.cos(seed.angle) * seed.speed;
+    seed.y += Math.sin(seed.angle) * seed.speed;
+    // SEED COLLISION WITH FOREST BLOB
+const distanceToPlayer = Math.hypot(
+    seed.x - player.x,
+    seed.y - player.y
+);
+
+if (distanceToPlayer < 25 && !isDodging) {
+    // Lose half a heart
+    playerHealth = Math.max(0, playerHealth - 0.5);
+
+    // Remove the seed
+    snipSeeds.splice(i, 1);
+
+    console.log("Forest Blob health:", playerHealth);
+
+    continue;
+}
+
+    // Draw the little brown seed
+    ctx.save();
+    ctx.translate(seed.x, seed.y);
+    ctx.rotate(seed.angle);
+
+    ctx.fillStyle = seed.color;
+    ctx.strokeStyle = "#4a301c";
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Remove seeds that leave the room
+    // SEEDS HAVE A 25% CHANCE TO GROW INTO A SNIP
+if (
+    seed.x < 0 ||
+    seed.x > canvas.width ||
+    seed.y < 0 ||
+    seed.y > canvas.height
+) {
+    // Only 1 out of 4 seeds will grow!
+    if (Math.random() < 0.25) {
+
+        // Keep the new Snip inside the forest
+        const newX = Math.max(40, Math.min(canvas.width - 40, seed.x));
+        const newY = Math.max(40, Math.min(canvas.height - 40, seed.y));
+
+        // Grow a new Snip!
+        spawnSnip(newX, newY, seed.room);
+
+        console.log("🌱 A new Snip has grown!");
+    }
+
+    // Remove the original seed
+        snipSeeds.splice(i, 1);
+}
+} // Close the seed loop
+
 // UPDATE AND DRAW ARROWS
 for (let i = arrows.length - 1; i >= 0; i--) {
     const arrow = arrows[i];
 
+    // Move only if the arrow is not stuck
+if (!arrow.stuck) {
     arrow.x += Math.cos(arrow.angle) * arrow.speed;
     arrow.y += Math.sin(arrow.angle) * arrow.speed;
 
+    // Check collision with trees in this room
+    const trees = forestRooms[currentRoom].trees;
+
+    for (const [treeX, treeY] of trees) {
+        // Check the arrowhead, not just the arrow's center
+        const tipX = arrow.x + Math.cos(arrow.angle) * 20;
+        const tipY = arrow.y + Math.sin(arrow.angle) * 20;
+
+        const distance = Math.hypot(
+            tipX - treeX,
+            tipY - treeY
+        );
+
+        if (distance < 25) {
+            arrow.stuck = true;
+            arrow.stuckTime = performance.now();
+            break;
+        }
+    }
+}
+
     ctx.save();
+    // Fade stuck arrows over 1.5 seconds
+if (arrow.stuck) {
+    const elapsed = performance.now() - arrow.stuckTime;
+    ctx.globalAlpha = Math.max(0, 1 - elapsed / 1500);
+
+    if (elapsed >= 1500) {
+        ctx.restore();
+        arrows.splice(i, 1);
+        continue;
+    }
+}
     ctx.translate(arrow.x, arrow.y);
     ctx.rotate(arrow.angle);
 
@@ -828,8 +1221,27 @@ if (isTransitioning) {
         isTransitioning = false;
     }
 }
+// Draw Forest Blob's hearts
+drawHealth();
+
+// Check if Forest Blob has been defeated
+if (playerHealth <= 0) {
+    gameOver = true;
+}
+
+// Show Game Over or continue playing
+if (gameOver) {
+    drawGameOver();
+} else {
     requestAnimationFrame(gameLoop);
+}
 }
 
 // Start the game!
+// RESTART GAME WHEN R IS PRESSED
+window.addEventListener("keydown", (event) => {
+    if (gameOver && event.key.toLowerCase() === "r") {
+        location.reload();
+    }
+});
 gameLoop();
