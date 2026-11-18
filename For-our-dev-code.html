@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <style>
+    body {
+        background-color: rgb(0, 0, 0);
+        color: white;
+        font-family: baskervvile;
+        margin: 0;
+        min-height: 100vh;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+</style>
+<h1>ENTER ACCESS CODE</h1>
+
+<input type="password" id="accessCode" placeholder="Secret code">
+<h2></h2>
+<button onclick="checkCode()">ENTER</button>
+
+<p id="message"></p>
+
+<script>
+    // CUSTOMIZE THESE!
+    const secretCode = "DEVELOPER32";
+    const destination = "developer-page-for-test.html";
+
+    function checkCode() {
+        const code = document.getElementById("accessCode").value;
+        const message = document.getElementById("message");
+
+        if (code.trim().toUpperCase() === secretCode.toUpperCase()) {
+            message.style.color = "green";
+            message.textContent = "ACCESS GRANTED ";
+
+            setTimeout(() => {
+                window.location.href = destination;
+            }, 1000);
+        } else {
+            message.style.color = "red";
+            message.textContent = "WRONG CODE";
+        }
+    }
+</script>
+<button onclick="window.location.href='index.html'">
+BACK TO HOME
+</button>

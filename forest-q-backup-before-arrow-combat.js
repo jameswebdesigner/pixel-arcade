@@ -27,6 +27,7 @@ let chargeStart = 0;
 
 // HOLD MOUSE TO PULL BACK THE BOW
 canvas.addEventListener("mousedown", (event) => {
+    if (fallingIntoHole) return;
     if (event.button !== 0) return;
 
     const now = Date.now();
@@ -42,6 +43,10 @@ canvas.addEventListener("mousedown", (event) => {
 
 // RELEASE TO FIRE!
 window.addEventListener("mouseup", (event) => {
+    if (fallingIntoHole) {
+    isCharging = false;
+    return;
+}
     if (!isCharging || event.button !== 0) return;
 
     isCharging = false;
@@ -308,6 +313,7 @@ function drawForest() {
     ctx.fillStyle = "#75b957";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+
     // Tiny grass patches
     ctx.strokeStyle = "#4b8c37";
     ctx.lineWidth = 2;
@@ -325,7 +331,138 @@ function drawForest() {
         ctx.moveTo(x + 5, y);
         ctx.lineTo(x + 7, y - 5);
         ctx.stroke();
-    }
+    } 
+    
+}
+let fallingIntoHole = false;
+let fallStartTime = 0;
+function drawCave() {
+    if (currentRoom !== 3) return;
+
+    ctx.fillStyle = "#6b5140";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Rocky cave walls
+ctx.fillStyle = "#3d3530";
+
+ctx.fillRect(0, 0, canvas.width, 35);
+ctx.fillRect(0, canvas.height - 35, canvas.width, 35);
+ctx.fillRect(0, 0, 35, canvas.height);
+ctx.fillRect(canvas.width - 35, 0, 35, canvas.height);
+// Wooden archery target
+ctx.save();
+ctx.translate(700, 280);
+
+// Wooden stand
+ctx.fillStyle = "#79502d";
+ctx.fillRect(-5, 0, 10, 45);
+
+// Target rings
+const rings = [
+    [30, "#79502d"],
+    [26, "#ffffff"],
+    [19, "#e53935"],
+    [12, "#ffffff"],
+    [6, "#e53935"]
+];
+
+for (const [radius, color] of rings) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// Shooting instructions
+ctx.fillStyle = "#ffffff";
+ctx.font = "16px Arial";
+ctx.textAlign = "center";
+ctx.fillText("Shoot the target!", 0, -45);
+
+ctx.restore();
+// Tutorial welcome message
+ctx.save();
+ctx.textAlign = "center";
+
+ctx.fillStyle = "#ffe5ad";
+ctx.font = "bold 30px Arial";
+ctx.fillText("THE TRAINING CAVE", canvas.width / 2, 85);
+
+ctx.fillStyle = "#ffffff";
+ctx.font = "18px Arial";
+ctx.fillText("Welcome, Forest Blob!", canvas.width / 2, 115);
+ctx.fillText("Use WASD or arrow keys to move, space to roll, and click to shoot", canvas.width / 2, 145);
+
+ctx.restore();
+// Glowing blue crystals
+const crystals = [
+    [80, 80],
+    [250, 65],
+    [700, 90],
+    [820, 400],
+    [100, 480]
+];
+
+for (const [x, y] of crystals) {
+    ctx.save();
+
+    ctx.shadowColor = "#00cfff";
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = "#38d9ff";
+
+    ctx.beginPath();
+    ctx.moveTo(x - 10, y);
+    ctx.lineTo(x - 8, y - 22);
+    ctx.lineTo(x, y - 35);
+    ctx.lineTo(x + 10, y - 20);
+    ctx.lineTo(x + 12, y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+}
+    // Scattered cave rocks
+for (let i = 0; i < 45; i++) {
+    const x = 25 + (i * 137) % (canvas.width - 50);
+    const y = 25 + (i * 97) % (canvas.height - 50);
+    const size = 4 + (i * 7) % 9;
+
+    // Rock shadow
+    ctx.fillStyle = "#49382c";
+    ctx.beginPath();
+    ctx.ellipse(x + 2, y + 3, size, size * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Gray rock
+    ctx.fillStyle = "#85817a";
+    ctx.beginPath();
+    ctx.ellipse(x, y, size, size * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rock highlight
+    ctx.fillStyle = "#aaa59d";
+    ctx.beginPath();
+    ctx.ellipse(x - 2, y - 2, size * 0.5, size * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+}
+function drawTutorialHole() {
+    if (currentRoom !== 0) return;
+
+    ctx.save();
+
+    // Dirt rim
+    ctx.fillStyle = "#79502d";
+    ctx.beginPath();
+    ctx.ellipse(450, 350, 40, 28, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark hole
+    ctx.fillStyle = "#111510";
+    ctx.beginPath();
+    ctx.ellipse(450, 347, 32, 21, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
 }
 function drawTree(x, y) {
     ctx.save();
@@ -474,6 +611,19 @@ const rotation = Math.sin(time * speed) * (walking ? 0.12 : 0.035);
 
 // Move the rotation point to Blue Blob's center
 ctx.translate(x, y + bob);
+// FALLING INTO THE TUTORIAL HOLE
+if (fallingIntoHole) {
+    const progress = Math.min(
+        (performance.now() - fallStartTime) / 1000,
+        1
+    );
+
+    // Spin twice
+    ctx.rotate(progress * Math.PI * 4);
+
+    // Shrink into the hole
+    ctx.scale(1 - progress, 1 - progress);
+}
 // SLOW CARTOON DODGE ROLL
 if (isDodging) {
     const rollProgress = Math.min(
@@ -750,9 +900,13 @@ const forestRooms = [
     trees: generateRandomTrees()
 },
     {
-        name: "East Forest",
-        trees: generateRandomTrees()
-    }
+    name: "East Forest",
+    trees: generateRandomTrees()
+},
+{
+    name: "Underground Training Cave",
+    trees: []
+}
 ];
 // Spawn Snips AFTER the forest rooms are created
 spawnSnip(350, 250, 1);
@@ -764,7 +918,7 @@ document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
 
     keys[key] = true;
-    console.log("KEY PRESSED:", event.code);
+    
     // START BLUE BLOB'S DODGE ROLL
 if (event.code === "Space" || event.code === "ShiftLeft") {
     event.preventDefault();
@@ -937,7 +1091,11 @@ function gameLoop() {
     updateSnips();
     // Move Blue Blob
     // BLUE BLOB MOVEMENT AND DODGE ROLL
-if (isDodging) {
+if (fallingIntoHole) {
+    player.x = 450;
+    player.y = 350;
+    isDodging = false;
+} else if (isDodging) {
     const dodgeElapsed = performance.now() - dodgeStartTime;
 
     if (dodgeElapsed < dodgeDuration) {
@@ -1015,6 +1173,37 @@ ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 // Redraw the grassy background
 drawForest();
+drawCave();
+drawTutorialHole();
+// Detect when Forest Blob enters the hole
+if (currentRoom === 0) {
+    const holeDistance = Math.hypot(
+        player.x - 450,
+        player.y - 350
+    );
+
+    if (holeDistance < 20) {
+        if (!fallingIntoHole) {
+    fallingIntoHole = true;
+    fallStartTime = performance.now();
+}
+// Enter the tutorial after falling
+if (fallingIntoHole &&
+    performance.now() - fallStartTime >= 1000) {
+
+    currentRoom = 3;
+
+    player.x = 150;
+    player.y = 300;
+
+    fallingIntoHole = false;
+    isCharging = false;
+    isDodging = false;
+
+    arrows.length = 0;
+}
+    }
+}
 drawExits();
 
     // Get the trees for the current room
