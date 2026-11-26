@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YIPPEE!</title>
+
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 60px;
+            animation: rainbow 2s linear infinite;
+        }
+        h2 {
+            animation: rainbow 2s linear infinite;
+        }
+        p {
+            animation: rainbow 2s linear infinite;
+        }
+        button {
+            animation: rainbow 2s linear infinite;
+            background-color: grey;
+            border: 1px solid #000000;
+        }
+        button:hover {
+            animation: rainbow 1s linear infinite;
+            transform: translateY(-3px);
+            background-color: grey;
+            border: 1px solid #000000;
+        }
+
+
+        img {
+            width: 300px;
+            max-width: 90vw;
+        }
+
+        @keyframes rainbow {
+            0% { color: red; }
+            25% { color: yellow; }
+            50% { color: lime; }
+            75% { color: cyan; }
+            100% { color: red; }
+        }
+
+        a {
+            color: white;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>YIPPEE!!!</h1>
+
+    <img src="https://i.pinimg.com/originals/43/8d/64/438d6494af6980470684223e32ae202a.gif" alt="Yippee creature">
+
+    <h2>YOU HAVE ACHIEVED YIPPEE.</h2>
+
+    <p>Was it worth fighting Borp?</p>
+    <p>Absolutely.</p>
+
+    <button onclick="window.location.href='secret-access.html'">
+        EXIT THE PORTAL
+    </button>
+
+</body>
+</html>
