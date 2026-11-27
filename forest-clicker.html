@@ -1,0 +1,2293 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forest Clicker</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #182b20;
+    color: #fff2cf;
+    font-family: monospace;
+    overflow: hidden;
+}
+
+#topbar {
+    height: 85px;
+    background: #47301f;
+    border-bottom: 5px solid #92683c;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    gap: 15px;
+}
+
+h1 {
+    color: #c8ee91;
+    font-size: 26px;
+    margin: 0;
+}
+
+#seedCount {
+    font-size: 28px;
+    color: #f6dc83;
+    font-weight: bold;
+}
+
+#production {
+    color: #bce58c;
+    font-size: 13px;
+}
+
+button {
+    font-family: monospace;
+    cursor: pointer;
+}
+
+.menuButton {
+    background: #815732;
+    color: #fff2cf;
+    border: 3px solid #c09556;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+.menuButton:hover {
+    background: #a37645;
+}
+
+#game {
+    display: flex;
+    height: calc(100dvh - 85px);
+}
+
+#worldContainer {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+#shop {
+    width: 290px;
+    flex-shrink: 0;
+    background: #f3d49b;
+    color: #573921;
+    border-left: 6px solid #936138;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+#shop h2 {
+    text-align: center;
+    margin: 10px 0;
+}
+
+#seedButton {
+    display: block;
+    width: 100%;
+    height: 120px;
+    font-size: 75px;
+    background: #d5b478;
+    border: 4px solid #98683a;
+    border-radius: 10px;
+    transition: transform 0.08s;
+    touch-action: manipulation;
+}
+
+#seedButton:active {
+    transform: scale(0.93);
+}
+
+#clickLabel {
+    text-align: center;
+    margin: 8px;
+    font-weight: bold;
+}
+
+.shopItem {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #ffe6b5;
+    border: 3px solid #ba8a50;
+    border-radius: 5px;
+    color: #573921;
+    text-align: left;
+    gap: 10px;
+}
+
+.shopItem:hover:not(:disabled) {
+    background: #fff1d0;
+}
+
+.shopItem.selected {
+    border-color: #3e8d3d;
+    background: #d4e9a5;
+}
+
+.shopItem:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.itemIcon {
+    font-size: 27px;
+}
+
+.itemName {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.itemDescription {
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.itemPrice {
+    color: #48752c;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+#message {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #47301fee;
+    border: 3px solid #c09556;
+    padding: 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    text-align: center;
+    max-width: 90%;
+    z-index: 5;
+}
+
+#controls {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: #382b20dd;
+    border: 2px solid #a37c49;
+    padding: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    pointer-events: none;
+}
+
+#zoomControls {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    display: flex;
+    gap: 6px;
+}
+
+#zoomControls button {
+    width: 42px;
+    height: 42px;
+    background: #69472d;
+    border: 3px solid #c09556;
+    color: white;
+    font-size: 24px;
+}
+
+.floatingSeed {
+    position: fixed;
+    color: #477a27;
+    font-size: 25px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 100;
+    animation: floatUp 0.8s forwards;
+}
+
+@keyframes floatUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(-80px);
+        opacity: 0;
+    }
+}
+
+#achievementBox {
+    background: #e5c38c;
+    border: 2px solid #b38a50;
+    padding: 8px;
+    font-size: 12px;
+    line-height: 1.8;
+    margin-top: 15px;
+}
+
+@media (max-width: 700px) {
+
+    #topbar {
+        height: 85px;
+        padding: 6px;
+    }
+
+    h1 {
+        font-size: 16px;
+    }
+
+    #seedCount {
+        font-size: 18px;
+    }
+
+    #game {
+        flex-direction: column;
+    }
+
+    #worldContainer {
+        min-height: 45%;
+    }
+
+    #shop {
+        width: 100%;
+        height: 45%;
+        border-left: none;
+        border-top: 5px solid #936138;
+    }
+
+    #controls {
+        display: none;
+    }
+
+    #seedButton {
+        height: 70px;
+        font-size: 45px;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+
+    <div>
+        <h1>FOREST CLICKER</h1>
+        <div id="production">0 seeds/sec</div>
+    </div>
+
+    <div id="seedCount">0 Seeds</div>
+
+    <button class="menuButton"
+        onclick="saveGame(); location.href='side-adventures.html'">
+        Exit
+    </button>
+
+</div>
+
+<div id="game">
+
+    <div id="worldContainer">
+
+        <canvas id="world"></canvas>
+
+        <div id="message">
+            Welcome to your forest!
+        </div>
+
+        <div id="controls">
+            WASD / Arrows: Move camera<br>
+            Right drag: Move camera<br>
+            Scroll: Zoom<br>
+            Click tree: Chop for 50 seeds<br>
+            ESC: Cancel placement
+        </div>
+
+        <div id="zoomControls">
+
+            <button onclick="zoomCenter(-1)">−</button>
+
+            <button onclick="zoomCenter(1)">+</button>
+
+            <button onclick="centerCamera()">⌂</button>
+
+        </div>
+
+    </div>
+
+    <div id="shop">
+
+        <button id="seedButton">🌱</button>
+
+        <div id="clickLabel">
+            +1 seed per click
+        </div>
+
+        <h2>Forest Shop</h2>
+
+        <div id="shopItems"></div>
+
+        <div id="achievementBox"></div>
+
+        <br>
+
+        <button class="menuButton" onclick="manualSave()">
+            Save
+        </button>
+
+        <button class="menuButton" onclick="resetGame()">
+            Reset
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+// ========================================
+// CANVAS AND WORLD SETTINGS
+// ========================================
+
+const canvas = document.getElementById("world");
+const ctx = canvas.getContext("2d");
+
+const TILE = 32;
+const COLS = 60;
+const ROWS = 60;
+
+const WORLD_WIDTH = COLS * TILE;
+const WORLD_HEIGHT = ROWS * TILE;
+
+const SAVE_KEY = "forestClickerWorldV2";
+
+let seeds = 0;
+let totalSeeds = 0;
+let totalClicks = 0;
+let treesChopped = 0;
+
+let clickPower = 1;
+let production = 0;
+
+let selected = null;
+let world = [];
+let buildings = [];
+let particles = [];
+
+let frame = 0;
+
+let camera = {
+    x: 0,
+    y: 0,
+    zoom: 1.5
+};
+
+let mouse = {
+    x: -1000,
+    y: -1000
+};
+
+let dragging = false;
+let dragX = 0;
+let dragY = 0;
+
+const keys = {};
+
+
+// ========================================
+// SHOP ITEMS
+// ========================================
+
+const upgrades = [
+
+    {
+        name: "Better Clicking",
+        icon: "👆",
+        baseCost: 15,
+        power: 0,
+        owned: 0,
+        description: "+1 seed per click"
+    },
+
+    {
+        name: "Friendly Snip",
+        icon: "🌼",
+        baseCost: 50,
+        power: 1,
+        owned: 0,
+        description: "+1 seed/sec"
+    },
+
+    {
+        name: "Forest Blob",
+        icon: "🏹",
+        baseCost: 150,
+        power: 5,
+        owned: 0,
+        description: "+5 seeds/sec"
+    },
+
+    {
+        name: "Magical Tree",
+        icon: "🌳",
+        baseCost: 500,
+        power: 15,
+        owned: 0,
+        description: "+15 seeds/sec"
+    },
+
+    {
+        name: "Mushroom House",
+        size: 4,
+        icon: "🍄",
+        baseCost: 2000,
+        power: 50,
+        owned: 0,
+        description: "+50 seeds/sec"
+    },
+
+    {
+        name: "Enchanted Grove",
+        size: 5,
+        icon: "🌲",
+        baseCost: 10000,
+        power: 200,
+        owned: 0,
+        description: "+200 seeds/sec"
+    },
+
+    {
+        name: "Forest Guardian Statue",
+        size: 10,
+        icon: "🐉",
+        baseCost: 50000,
+        power: 1000,
+        owned: 0,
+        description: "+1,000 seeds/sec"
+    }
+
+];
+
+
+// ========================================
+// GENERATE THE FOREST
+// ========================================
+
+function generateWorld() {
+
+    world = [];
+
+    for (let y = 0; y < ROWS; y++) {
+
+        const row = [];
+
+        for (let x = 0; x < COLS; x++) {
+
+            const distance = Math.hypot(
+                x - COLS / 2,
+                y - ROWS / 2
+            );
+
+            let type = "grass";
+
+            const random = Math.random();
+
+            // Leave an open clearing in the middle.
+
+            if (distance > 5) {
+
+                if (random < 0.30) {
+                    type = "tree";
+                } else if (random < 0.34) {
+                    type = "rock";
+                } else if (random < 0.42) {
+                    type = "flowers";
+                }
+
+            } else if (random < 0.08) {
+
+                type = "flowers";
+
+            }
+
+            row.push({
+                type: type,
+                shade: Math.floor(Math.random() * 4),
+                detail: Math.floor(Math.random() * 20)
+            });
+
+        }
+
+        world.push(row);
+
+    }
+
+}
+
+
+// ========================================
+// RESIZE AND CAMERA
+// ========================================
+
+function resizeCanvas() {
+
+    const rect =
+        canvas.parentElement.getBoundingClientRect();
+
+    canvas.width = Math.max(1, Math.floor(rect.width));
+    canvas.height = Math.max(1, Math.floor(rect.height));
+
+    ctx.imageSmoothingEnabled = false;
+
+    clampCamera();
+
+}
+
+function centerCamera() {
+
+    camera.x =
+        WORLD_WIDTH / 2 -
+        canvas.width / camera.zoom / 2;
+
+    camera.y =
+        WORLD_HEIGHT / 2 -
+        canvas.height / camera.zoom / 2;
+
+    clampCamera();
+
+}
+
+function clampCamera() {
+
+    const viewWidth = canvas.width / camera.zoom;
+    const viewHeight = canvas.height / camera.zoom;
+
+    if (viewWidth >= WORLD_WIDTH) {
+
+        camera.x = (WORLD_WIDTH - viewWidth) / 2;
+
+    } else {
+
+        camera.x = Math.max(
+            0,
+            Math.min(WORLD_WIDTH - viewWidth, camera.x)
+        );
+
+    }
+
+    if (viewHeight >= WORLD_HEIGHT) {
+
+        camera.y = (WORLD_HEIGHT - viewHeight) / 2;
+
+    } else {
+
+        camera.y = Math.max(
+            0,
+            Math.min(WORLD_HEIGHT - viewHeight, camera.y)
+        );
+
+    }
+
+}
+
+window.addEventListener("resize", resizeCanvas);
+
+function changeZoom(amount, screenX, screenY) {
+
+    const worldX =
+        camera.x + screenX / camera.zoom;
+
+    const worldY =
+        camera.y + screenY / camera.zoom;
+
+    camera.zoom = Math.max(
+        0.4,
+        Math.min(4, camera.zoom * amount)
+    );
+
+    camera.x = worldX - screenX / camera.zoom;
+    camera.y = worldY - screenY / camera.zoom;
+
+    clampCamera();
+
+}
+
+function zoomCenter(direction) {
+
+    changeZoom(
+        direction > 0 ? 1.2 : 1 / 1.2,
+        canvas.width / 2,
+        canvas.height / 2
+    );
+
+}
+
+canvas.addEventListener("wheel", event => {
+
+    event.preventDefault();
+
+    const rect = canvas.getBoundingClientRect();
+
+    changeZoom(
+        event.deltaY < 0 ? 1.12 : 1 / 1.12,
+        event.clientX - rect.left,
+        event.clientY - rect.top
+    );
+
+}, { passive: false });
+
+
+// ========================================
+// KEYBOARD CONTROLS
+// ========================================
+
+window.addEventListener("keydown", event => {
+
+    const key = event.key.toLowerCase();
+
+    keys[key] = true;
+
+    if (
+        ["arrowup", "arrowdown",
+        "arrowleft", "arrowright"].includes(key)
+    ) {
+        event.preventDefault();
+    }
+
+    if (event.key === "Escape") {
+
+        selected = null;
+
+        showMessage("Building cancelled.");
+
+        updateShop();
+
+    }
+
+});
+
+window.addEventListener("keyup", event => {
+
+    keys[event.key.toLowerCase()] = false;
+
+});
+
+window.addEventListener("blur", () => {
+
+    for (const key in keys) {
+        keys[key] = false;
+    }
+
+    dragging = false;
+
+});
+
+function updateCamera() {
+
+    const speed = 7 / camera.zoom;
+
+    if (keys.w || keys.arrowup) camera.y -= speed;
+    if (keys.s || keys.arrowdown) camera.y += speed;
+    if (keys.a || keys.arrowleft) camera.x -= speed;
+    if (keys.d || keys.arrowright) camera.x += speed;
+
+    clampCamera();
+
+}
+
+
+// ========================================
+// MOUSE CONTROLS
+// ========================================
+
+canvas.addEventListener("contextmenu", event => {
+
+    event.preventDefault();
+
+});
+
+canvas.addEventListener("pointerdown", event => {
+
+    const rect = canvas.getBoundingClientRect();
+
+    mouse.x = event.clientX - rect.left;
+    mouse.y = event.clientY - rect.top;
+
+    if (event.button === 2 || event.button === 1) {
+
+        dragging = true;
+
+        dragX = event.clientX;
+        dragY = event.clientY;
+
+        canvas.setPointerCapture(event.pointerId);
+
+        canvas.style.cursor = "grabbing";
+
+        return;
+
+    }
+
+    if (event.button === 0) {
+
+        clickWorld();
+
+    }
+
+});
+
+canvas.addEventListener("pointermove", event => {
+
+    const rect = canvas.getBoundingClientRect();
+
+    mouse.x = event.clientX - rect.left;
+    mouse.y = event.clientY - rect.top;
+
+    if (dragging) {
+
+        camera.x -=
+            (event.clientX - dragX) / camera.zoom;
+
+        camera.y -=
+            (event.clientY - dragY) / camera.zoom;
+
+        dragX = event.clientX;
+        dragY = event.clientY;
+
+        clampCamera();
+
+    }
+
+});
+
+window.addEventListener("pointerup", () => {
+
+    dragging = false;
+
+    canvas.style.cursor = "crosshair";
+
+});
+
+canvas.addEventListener("pointercancel", () => {
+
+    dragging = false;
+
+});
+
+canvas.addEventListener("pointerleave", () => {
+
+    if (!dragging) {
+
+        mouse.x = -1000;
+        mouse.y = -1000;
+
+    }
+
+});
+
+function getMouseTile() {
+
+    return {
+
+        x: Math.floor(
+            (camera.x + mouse.x / camera.zoom) / TILE
+        ),
+
+        y: Math.floor(
+            (camera.y + mouse.y / camera.zoom) / TILE
+        )
+
+    };
+
+}
+
+function insideWorld(x, y) {
+
+    return x >= 0 && x < COLS &&
+           y >= 0 && y < ROWS;
+
+}
+
+function buildingAt(x, y) {
+
+    return buildings.find(building => {
+
+        const size = upgrades[building.type].size || 1;
+
+        return (
+            x >= building.x &&
+            x < building.x + size &&
+            y >= building.y &&
+            y < building.y + size
+        );
+
+    });
+
+}
+
+function canPlace(x, y, index = selected) {
+
+    const size = upgrades[index]?.size || 1;
+
+    for (let dy = 0; dy < size; dy++) {
+
+        for (let dx = 0; dx < size; dx++) {
+
+            const tx = x + dx;
+            const ty = y + dy;
+
+            if (!insideWorld(tx, ty)) return false;
+
+            const tile = world[ty][tx];
+
+            if (tile.type === "tree") return false;
+
+            if (tile.type === "rock") return false;
+
+            if (buildingAt(tx, ty)) return false;
+
+        }
+
+    }
+
+    return true;
+
+}
+
+
+// ========================================
+// CLICKING THE WORLD
+// ========================================
+
+function clickWorld() {
+
+    const { x, y } = getMouseTile();
+
+    if (!insideWorld(x, y)) return;
+
+    const tile = world[y][x];
+
+    // Building mode.
+
+    if (selected !== null) {
+
+        if (!canPlace(x, y)) {
+
+            showMessage(
+                "Something is blocking this tile!"
+            );
+
+            return;
+
+        }
+
+        placeBuilding(selected, x, y);
+
+        return;
+
+    }
+
+    // Chop down natural trees.
+
+    if (tile.type === "tree") {
+
+        if (seeds < 50) {
+
+            showMessage(
+                "You need 50 seeds to chop this tree!"
+            );
+
+            return;
+
+        }
+
+        seeds -= 50;
+
+        treesChopped++;
+
+        tile.type = "grass";
+
+        createParticles(
+            x * TILE + 16,
+            y * TILE + 16,
+            "#b58a49",
+            20
+        );
+
+        showMessage("Tree chopped! -50 seeds");
+
+        updateDisplay();
+
+        saveGame();
+
+        return;
+
+    }
+
+    if (tile.type === "rock") {
+
+    if (seeds < 100) {
+
+        showMessage("You need 100 seeds to remove this rock!");
+
+        return;
+
+    }
+
+    seeds -= 100;
+
+    tile.type = "grass";
+
+    createParticles(
+        x * TILE + 16,
+        y * TILE + 16,
+        "#a0a8a0",
+        25
+    );
+
+    showMessage("Rock destroyed! -100 seeds");
+
+    updateDisplay();
+
+    saveGame();
+
+    return;
+
+}
+
+    const building = buildingAt(x, y);
+
+    if (building) {
+
+        const upgrade = upgrades[building.type];
+
+        showMessage(
+            upgrade.name +
+            " | +" +
+            upgrade.power +
+            " seeds/sec"
+        );
+
+    }
+
+}
+
+
+// ========================================
+// SEED CLICKER
+// ========================================
+
+document.getElementById("seedButton")
+.addEventListener("click", event => {
+
+    seeds += clickPower;
+
+    totalSeeds += clickPower;
+
+    totalClicks++;
+
+    const floating = document.createElement("div");
+
+    floating.className = "floatingSeed";
+
+    floating.textContent = "+" + clickPower;
+
+    const rect =
+        event.currentTarget.getBoundingClientRect();
+
+    floating.style.left =
+        (rect.left + rect.width / 2) + "px";
+
+    floating.style.top =
+        (rect.top + rect.height / 2) + "px";
+
+    document.body.appendChild(floating);
+
+    setTimeout(() => floating.remove(), 800);
+
+    updateDisplay();
+
+});
+
+
+// ========================================
+// SHOP
+// ========================================
+
+function getCost(index) {
+
+    const upgrade = upgrades[index];
+
+    return Math.ceil(
+        upgrade.baseCost *
+        Math.pow(1.15, upgrade.owned)
+    );
+
+}
+
+function selectUpgrade(index) {
+
+    const cost = getCost(index);
+
+    if (seeds < cost) {
+
+        showMessage("Not enough seeds!");
+
+        return;
+
+    }
+
+    // Clicking upgrade doesn't need placement.
+
+    if (index === 0) {
+
+        seeds -= cost;
+
+        upgrades[0].owned++;
+
+        calculateProduction();
+
+        updateDisplay();
+
+        saveGame();
+
+        showMessage("Clicking power upgraded!");
+
+        return;
+
+    }
+
+    if (selected === index) {
+
+        selected = null;
+
+        showMessage("Building cancelled.");
+
+    } else {
+
+        selected = index;
+
+        showMessage(
+            "Choose a tile for " +
+            upgrades[index].name +
+            "!"
+        );
+
+    }
+
+    updateShop();
+
+}
+
+function placeBuilding(index, x, y) {
+
+    const cost = getCost(index);
+
+    if (seeds < cost) {
+
+        showMessage("Not enough seeds!");
+
+        selected = null;
+
+        updateShop();
+
+        return;
+
+    }
+
+    if (!canPlace(x, y)) return;
+
+    seeds -= cost;
+
+    upgrades[index].owned++;
+
+    buildings.push({
+        type: index,
+        x: x,
+        y: y
+    });
+
+    world[y][x].type = "grass";
+
+    createParticles(
+        x * TILE + 16,
+        y * TILE + 16,
+        "#caff87",
+        15
+    );
+
+    showMessage(
+        upgrades[index].name + " placed!"
+    );
+
+    selected = null;
+
+    calculateProduction();
+
+    updateDisplay();
+
+    saveGame();
+
+}
+
+function calculateProduction() {
+
+    clickPower = 1 + upgrades[0].owned;
+
+    production = 0;
+
+    for (const building of buildings) {
+
+        production += upgrades[building.type].power;
+
+    }
+
+}
+
+function createShop() {
+
+    const shop = document.getElementById("shopItems");
+
+    shop.innerHTML = "";
+
+    upgrades.forEach((upgrade, index) => {
+
+        const button = document.createElement("button");
+
+        button.className = "shopItem";
+
+        button.id = "shop-" + index;
+
+        button.onclick = () => selectUpgrade(index);
+
+        button.innerHTML = `
+
+            <div class="itemIcon">
+                ${upgrade.icon}
+            </div>
+
+            <div>
+
+                <div class="itemName">
+                    ${upgrade.name}
+                </div>
+
+                <div class="itemDescription">
+                    ${upgrade.description}
+${index > 0
+    ? `<br>Size: ${upgrade.size || 1} × ${upgrade.size || 1} tiles`
+    : ""}
+                </div>
+
+                <div class="itemPrice"
+                     id="price-${index}">
+                </div>
+
+                <div class="itemDescription"
+                     id="owned-${index}">
+                </div>
+
+            </div>
+
+        `;
+
+        shop.appendChild(button);
+
+    });
+
+}
+
+function updateShop() {
+
+    upgrades.forEach((upgrade, index) => {
+
+        const button =
+            document.getElementById("shop-" + index);
+
+        button.disabled =
+            seeds < getCost(index) &&
+            selected !== index;
+
+        button.classList.toggle(
+            "selected",
+            selected === index
+        );
+
+        document.getElementById(
+            "price-" + index
+        ).textContent =
+            getCost(index).toLocaleString() + " seeds";
+
+        document.getElementById(
+            "owned-" + index
+        ).textContent =
+            "Owned: " + upgrade.owned;
+
+    });
+
+}
+
+function updateDisplay() {
+
+    document.getElementById("seedCount")
+        .textContent =
+        Math.floor(seeds).toLocaleString() + " Seeds";
+
+    document.getElementById("production")
+        .textContent =
+        production.toLocaleString() + " seeds/sec";
+
+    document.getElementById("clickLabel")
+        .textContent =
+        "+" + clickPower + " seeds per click";
+
+    updateShop();
+
+    updateAchievements();
+
+}
+
+
+// ========================================
+// PIXEL ART DRAWING HELPERS
+// ========================================
+
+function rect(x, y, w, h, color) {
+
+    ctx.fillStyle = color;
+
+    ctx.fillRect(
+        Math.round(x),
+        Math.round(y),
+        w,
+        h
+    );
+
+}
+
+function shadow(x, y, width) {
+
+    rect(x + 3, y + 25, width, 4, "#315b32");
+
+    rect(x + 6, y + 29, width - 6, 2, "#315b32");
+
+}
+
+
+// ========================================
+// DRAW GRASS
+// ========================================
+
+function drawGrass(x, y, tile) {
+
+    const colors = [
+        "#639d49",
+        "#69a34e",
+        "#6da64e",
+        "#649f4b"
+    ];
+
+    rect(x, y, TILE, TILE, colors[tile.shade]);
+
+    const d = tile.detail;
+
+    rect(x + d, y + 5, 2, 3, "#548c40");
+
+    rect(x + d + 3, y + 7, 2, 2, "#548c40");
+
+    rect(x + 24, y + d, 2, 2, "#87b75b");
+
+}
+
+
+// ========================================
+// DRAW PIXEL ART TREES
+// ========================================
+
+function drawTree(x, y, magical = false) {
+
+    shadow(x, y, 27);
+
+    // Trunk.
+
+    rect(x + 12, y + 17, 9, 13, "#604127");
+
+    rect(x + 14, y + 17, 4, 12, "#a16b39");
+
+    // Dark leaf outline.
+
+    rect(x + 7, y + 1, 18, 24, "#285634");
+
+    rect(x + 3, y + 6, 26, 17, "#285634");
+
+    rect(x + 1, y + 12, 30, 9, "#285634");
+
+    const green = magical
+        ? "#4bbda1"
+        : "#42823e";
+
+    const light = magical
+        ? "#9aefd0"
+        : "#79b64b";
+
+    // Leaves.
+
+    rect(x + 9, y + 2, 14, 18, green);
+
+    rect(x + 5, y + 7, 22, 13, green);
+
+    rect(x + 3, y + 13, 26, 6, green);
+
+    // Highlights.
+
+    rect(x + 10, y + 3, 10, 5, light);
+
+    rect(x + 6, y + 8, 9, 5, light);
+
+    rect(x + 17, y + 9, 6, 4, light);
+
+    rect(x + 9, y + 16, 5, 3, light);
+
+    if (magical) {
+
+        rect(x + 7, y + 10, 2, 2, "#ffffa1");
+
+        rect(x + 22, y + 15, 2, 2, "#ffffa1");
+
+        rect(x + 16, y + 5, 2, 2, "#ffffff");
+
+    }
+
+}
+
+
+// ========================================
+// DRAW ROCKS
+// ========================================
+
+function drawRock(x, y) {
+
+    shadow(x, y, 24);
+
+    rect(x + 6, y + 12, 20, 14, "#535e59");
+
+    rect(x + 9, y + 8, 14, 17, "#535e59");
+
+    rect(x + 8, y + 13, 16, 10, "#87918a");
+
+    rect(x + 11, y + 10, 10, 6, "#b1b8aa");
+
+    rect(x + 19, y + 20, 5, 4, "#68746b");
+
+}
+
+
+// ========================================
+// DRAW WILD FLOWERS
+// ========================================
+
+function drawFlowers(x, y) {
+
+    for (let i = 0; i < 3; i++) {
+
+        const fx = x + 5 + i * 8;
+
+        const fy = y + 8 + (i % 2) * 8;
+
+        rect(fx + 2, fy + 4, 2, 7, "#39793b");
+
+        rect(fx, fy + 2, 6, 3, "#fff0a4");
+
+        rect(fx + 2, fy, 2, 7, "#fff0a4");
+
+        rect(fx + 2, fy + 2, 2, 2, "#e4a43d");
+
+    }
+
+}
+
+
+// ========================================
+// DRAW FRIENDLY SNIP
+// ========================================
+
+function drawSnip(x, y) {
+
+    const bob = Math.round(
+        Math.sin(frame * 0.05 + x) * 2
+    );
+
+    shadow(x, y, 24);
+
+    // Root legs.
+
+    rect(x + 9, y + 23, 4, 6, "#785034");
+
+    rect(x + 20, y + 23, 4, 6, "#785034");
+
+    // Stem.
+
+    rect(x + 14, y + 13, 5, 13, "#34763a");
+
+    // Leaves.
+
+    rect(x + 6, y + 18, 9, 4, "#408f43");
+
+    rect(x + 18, y + 16, 9, 4, "#408f43");
+
+    // Flower petals.
+
+    rect(x + 11, y + 1 + bob, 11, 22, "#f7d95d");
+
+    rect(x + 5, y + 7 + bob, 23, 11, "#f7d95d");
+
+    rect(x + 8, y + 4 + bob, 17, 17, "#f7d95d");
+
+    // Face.
+
+    rect(x + 11, y + 7 + bob, 12, 12, "#a96c32");
+
+    rect(x + 13, y + 10 + bob, 2, 4, "#29231a");
+
+    rect(x + 19, y + 10 + bob, 2, 4, "#29231a");
+
+    rect(x + 15, y + 16 + bob, 5, 2, "#29231a");
+
+}
+
+
+// ========================================
+// DRAW FOREST BLOB
+// ========================================
+
+function drawBlob(x, y) {
+
+    const bob = Math.round(
+        Math.sin(frame * 0.07 + x) * 2
+    );
+
+    shadow(x, y, 26);
+
+    // Legs.
+
+    rect(x + 8, y + 23, 5, 6, "#236b60");
+
+    rect(x + 20, y + 23, 5, 6, "#236b60");
+
+    // Body outline.
+
+    rect(x + 4, y + 9 + bob, 24, 16, "#216b5d");
+
+    rect(x + 8, y + 5 + bob, 16, 22, "#216b5d");
+
+    // Body.
+
+    rect(x + 6, y + 10 + bob, 20, 13, "#48bba0");
+
+    rect(x + 10, y + 7 + bob, 12, 17, "#48bba0");
+
+    // Highlight.
+
+    rect(x + 10, y + 8 + bob, 9, 3, "#8ae0c0");
+
+    // Eyes.
+
+    rect(x + 11, y + 13 + bob, 3, 5, "#163d35");
+
+    rect(x + 20, y + 13 + bob, 3, 5, "#163d35");
+
+    // Bow.
+
+    rect(x + 27, y + 10, 2, 14, "#a66a32");
+
+    rect(x + 25, y + 8, 3, 3, "#a66a32");
+
+    rect(x + 25, y + 23, 3, 3, "#a66a32");
+
+    rect(x + 25, y + 11, 1, 12, "#fff2cb");
+
+}
+
+
+// ========================================
+// DRAW MUSHROOM HOUSE
+// ========================================
+
+function drawMushroomHouse(x, y) {
+
+    shadow(x, y, 27);
+
+    // House walls.
+
+    rect(x + 7, y + 13, 20, 17, "#a87c4c");
+
+    rect(x + 9, y + 13, 16, 15, "#f2d6a0");
+
+    // Mushroom roof.
+
+    rect(x + 8, y + 1, 17, 16, "#8d3932");
+
+    rect(x + 4, y + 5, 25, 12, "#8d3932");
+
+    rect(x + 1, y + 12, 31, 6, "#8d3932");
+
+    rect(x + 9, y + 3, 15, 12, "#d95b49");
+
+    rect(x + 6, y + 7, 21, 8, "#d95b49");
+
+    // White mushroom spots.
+
+    rect(x + 11, y + 5, 5, 4, "#fff1d5");
+
+    rect(x + 21, y + 9, 5, 4, "#fff1d5");
+
+    rect(x + 5, y + 12, 4, 3, "#fff1d5");
+
+    // Door.
+
+    rect(x + 13, y + 20, 8, 10, "#79502e");
+
+    rect(x + 18, y + 25, 2, 2, "#efc55d");
+
+    // Window.
+
+    rect(x + 9, y + 20, 4, 5, "#7dc6d1");
+
+}
+
+
+// ========================================
+// DRAW ENCHANTED GROVE
+// ========================================
+
+function drawGrove(x, y) {
+
+    shadow(x, y, 28);
+
+    rect(x + 14, y + 17, 5, 12, "#80512e");
+
+    rect(x + 2, y + 20, 28, 5, "#245e4b");
+
+    rect(x + 5, y + 14, 22, 8, "#287b5d");
+
+    rect(x + 8, y + 8, 16, 8, "#3b9b71");
+
+    rect(x + 12, y + 2, 8, 9, "#61c78a");
+
+    rect(x + 15, y, 2, 4, "#aaffba");
+
+    rect(x + 8, y + 19, 3, 3, "#b5ffbb");
+
+    rect(x + 21, y + 15, 3, 3, "#e9ffae");
+
+    rect(x + 14, y + 10, 3, 3, "#e9ffae");
+
+}
+
+
+// ========================================
+// DRAW FOREST GUARDIAN
+// ========================================
+
+function drawGuardian(x, y) {
+
+    const bob = Math.round(
+        Math.sin(frame * 0.04 + x) * 2
+    );
+
+    shadow(x, y, 27);
+
+    // Wings.
+
+    rect(x + 1, y + 5 + bob, 7, 14, "#47663d");
+
+    rect(x + 25, y + 5 + bob, 7, 14, "#47663d");
+
+    rect(x + 3, y + 8 + bob, 5, 7, "#a3c66a");
+
+    rect(x + 25, y + 8 + bob, 5, 7, "#a3c66a");
+
+    // Body.
+
+    rect(x + 7, y + 6 + bob, 19, 20, "#285c43");
+
+    rect(x + 9, y + 8 + bob, 15, 16, "#589c57");
+
+    // Horns.
+
+    rect(x + 9, y + 1 + bob, 4, 7, "#f0d99a");
+
+    rect(x + 21, y + 1 + bob, 4, 7, "#f0d99a");
+
+    // Eyes.
+
+    rect(x + 11, y + 12 + bob, 4, 4, "#ffe887");
+
+    rect(x + 20, y + 12 + bob, 4, 4, "#ffe887");
+
+    rect(x + 12, y + 12 + bob, 2, 4, "#222222");
+
+    rect(x + 21, y + 12 + bob, 2, 4, "#222222");
+
+    // Belly.
+
+    rect(x + 13, y + 19 + bob, 9, 6, "#b3ce7e");
+
+    // Feet.
+
+    rect(x + 8, y + 25, 7, 5, "#285c43");
+
+    rect(x + 20, y + 25, 7, 5, "#285c43");
+
+}
+
+
+// ========================================
+// DRAW BUILDINGS
+// ========================================
+
+function drawBuilding(building) {
+
+    const x = building.x * TILE;
+    const y = building.y * TILE;
+
+    const size = upgrades[building.type].size || 1;
+
+    ctx.save();
+
+    ctx.translate(x, y);
+
+    ctx.scale(size, size);
+
+    switch (building.type) {
+
+        case 1:
+            drawSnip(0, 0);
+            break;
+
+        case 2:
+            drawBlob(0, 0);
+            break;
+
+        case 3:
+            drawTree(0, 0, true);
+            break;
+
+        case 4:
+            drawMushroomHouse(0, 0);
+            break;
+
+        case 5:
+            drawGrove(0, 0);
+            break;
+
+        case 6:
+            drawGuardian(0, 0);
+            break;
+
+    }
+
+    ctx.restore();
+
+}
+
+
+// ========================================
+// PARTICLES
+// ========================================
+
+function createParticles(x, y, color, amount) {
+
+    for (let i = 0; i < amount; i++) {
+
+        particles.push({
+
+            x: x,
+            y: y,
+
+            vx: (Math.random() - 0.5) * 5,
+
+            vy: (Math.random() - 0.5) * 5,
+
+            life: 35 + Math.random() * 15,
+
+            color: color
+
+        });
+
+    }
+
+}
+
+function updateParticles() {
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+
+        const p = particles[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        p.vy += 0.08;
+
+        p.life--;
+
+        if (p.life <= 0) {
+
+            particles.splice(i, 1);
+
+        }
+
+    }
+
+}
+
+function drawParticles() {
+
+    for (const p of particles) {
+
+        ctx.globalAlpha = Math.min(1, p.life / 20);
+
+        rect(p.x, p.y, 3, 3, p.color);
+
+    }
+
+    ctx.globalAlpha = 1;
+
+}
+
+
+// ========================================
+// BUILDING PLACEMENT PREVIEW
+// ========================================
+
+function drawPlacementPreview() {
+
+    const { x, y } = getMouseTile();
+
+    if (!insideWorld(x, y)) return;
+
+    const px = x * TILE;
+    const py = y * TILE;
+
+    if (selected !== null) {
+const size = upgrades[selected].size || 1;
+const footprint = TILE * size;
+        const valid =
+            canPlace(x, y) &&
+            seeds >= getCost(selected);
+
+        ctx.globalAlpha = 0.45;
+
+        rect(
+    px,
+    py,
+    footprint,
+    footprint,
+    valid ? "#aaff77" : "#ff4444"
+);
+
+        ctx.globalAlpha = 1;
+
+        if (valid) {
+
+            ctx.globalAlpha = 0.65;
+
+            drawBuilding({
+                type: selected,
+                x: x,
+                y: y
+            });
+
+            ctx.globalAlpha = 1;
+
+        }
+
+        ctx.strokeStyle =
+            valid ? "#caff9c" : "#ff7777";
+
+        ctx.lineWidth = 2;
+
+        ctx.strokeRect(px, py, footprint, footprint);
+
+    } else if (
+    world[y][x].type === "tree" ||
+    world[y][x].type === "rock"
+) {
+
+    const removalCost =
+        world[y][x].type === "rock" ? 100 : 50;
+
+        ctx.strokeStyle = "#ffe398";
+
+        ctx.lineWidth = 2;
+
+        ctx.strokeRect(px, py, TILE, TILE);
+
+        ctx.font = "bold 9px monospace";
+
+        ctx.textAlign = "center";
+
+        ctx.fillStyle = "#352619";
+
+        ctx.fillRect(px - 3, py - 12, 38, 11);
+
+        ctx.fillStyle = "#ffe398";
+
+        ctx.fillText("-" + removalCost, px + 16, py - 3);
+
+    }
+
+}
+
+
+// ========================================
+// DRAW THE WORLD
+// ========================================
+
+function drawWorld() {
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    ctx.fillStyle = "#203a26";
+
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+
+    ctx.scale(camera.zoom, camera.zoom);
+
+    ctx.translate(
+        -Math.round(camera.x),
+        -Math.round(camera.y)
+    );
+
+    // Only draw tiles visible on screen.
+    // This helps prevent lag.
+
+    const startX = Math.max(
+        0,
+        Math.floor(camera.x / TILE) - 1
+    );
+
+    const startY = Math.max(
+        0,
+        Math.floor(camera.y / TILE) - 1
+    );
+
+    const endX = Math.min(
+        COLS,
+        Math.ceil(
+            (camera.x + canvas.width / camera.zoom) / TILE
+        ) + 1
+    );
+
+    const endY = Math.min(
+        ROWS,
+        Math.ceil(
+            (camera.y + canvas.height / camera.zoom) / TILE
+        ) + 1
+    );
+
+    // Draw grass first.
+
+    for (let y = startY; y < endY; y++) {
+
+        for (let x = startX; x < endX; x++) {
+
+            drawGrass(
+                x * TILE,
+                y * TILE,
+                world[y][x]
+            );
+
+        }
+
+    }
+
+    // Draw natural objects.
+
+    for (let y = startY; y < endY; y++) {
+
+        for (let x = startX; x < endX; x++) {
+
+            const tile = world[y][x];
+
+            const px = x * TILE;
+            const py = y * TILE;
+
+            if (tile.type === "tree") {
+
+                drawTree(px, py);
+
+            } else if (tile.type === "rock") {
+
+                drawRock(px, py);
+
+            } else if (tile.type === "flowers") {
+
+                drawFlowers(px, py);
+
+            }
+
+        }
+
+    }
+
+    // Draw placed buildings.
+
+    for (const building of buildings) {
+
+    const size = upgrades[building.type].size || 1;
+
+    if (
+        building.x + size > startX &&
+        building.x < endX &&
+        building.y + size > startY &&
+        building.y < endY
+    ) {
+
+        drawBuilding(building);
+
+    }
+
+}
+
+    drawParticles();
+
+    drawPlacementPreview();
+
+    ctx.restore();
+
+}
+
+
+// ========================================
+// ACHIEVEMENTS
+// ========================================
+
+function updateAchievements() {
+
+    const achievements = [
+
+        ["First Seed", totalSeeds >= 1],
+
+        ["Making Friends", upgrades[1].owned >= 1],
+
+        ["The Hero Returns", upgrades[2].owned >= 1],
+
+        ["Lumberjack", treesChopped >= 10],
+
+        ["Village Builder", buildings.length >= 25],
+
+        ["Forest Guardian", upgrades[6].owned >= 1],
+
+        ["Millionaire", totalSeeds >= 1000000]
+
+    ];
+
+    document.getElementById("achievementBox")
+        .innerHTML =
+
+        "<strong>Achievements</strong><br>" +
+
+        achievements.map(a =>
+
+            (a[1] ? "🏆 " : "🔒 ") + a[0]
+
+        ).join("<br>") +
+
+        "<br><br>Trees chopped: " + treesChopped +
+
+        "<br>Buildings: " + buildings.length;
+
+}
+
+
+// ========================================
+// MESSAGES
+// ========================================
+
+let messageTimeout;
+
+function showMessage(text) {
+
+    const message =
+        document.getElementById("message");
+
+    message.textContent = text;
+
+    message.style.display = "block";
+
+    clearTimeout(messageTimeout);
+
+    messageTimeout = setTimeout(() => {
+
+        message.style.display = "none";
+
+    }, 3500);
+
+}
+
+
+// ========================================
+// SAVE GAME
+// ========================================
+
+function saveGame() {
+
+    const data = {
+
+        seeds,
+        totalSeeds,
+        totalClicks,
+        treesChopped,
+        world,
+        buildings,
+
+        owned: upgrades.map(
+            upgrade => upgrade.owned
+        ),
+
+        camera
+
+    };
+
+    try {
+
+        localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify(data)
+        );
+
+        return true;
+
+    } catch (error) {
+
+        return false;
+
+    }
+
+}
+
+function manualSave() {
+
+    showMessage(
+        saveGame()
+        ? "Forest saved!"
+        : "Unable to save forest."
+    );
+
+}
+
+function loadGame() {
+
+    try {
+
+        const saved = localStorage.getItem(SAVE_KEY);
+
+        if (!saved) return false;
+
+        const data = JSON.parse(saved);
+
+        if (
+            !Array.isArray(data.world) ||
+            data.world.length !== ROWS ||
+            !data.world.every(
+                row => Array.isArray(row) &&
+                       row.length === COLS
+            )
+        ) {
+
+            return false;
+
+        }
+
+        seeds = data.seeds || 0;
+
+        totalSeeds = data.totalSeeds || 0;
+
+        totalClicks = data.totalClicks || 0;
+
+        treesChopped = data.treesChopped || 0;
+
+        world = data.world;
+
+        buildings = data.buildings || [];
+
+        upgrades.forEach((upgrade, index) => {
+
+            upgrade.owned = data.owned?.[index] || 0;
+
+        });
+
+        if (data.camera) {
+
+            camera = data.camera;
+
+        }
+
+        return true;
+
+    } catch (error) {
+
+        return false;
+
+    }
+
+}
+
+function resetGame() {
+
+    if (!confirm(
+        "Delete your entire forest and start over?"
+    )) return;
+
+    try {
+
+        localStorage.removeItem(SAVE_KEY);
+
+    } catch (error) {
+
+        showMessage("Unable to reset saved game.");
+
+        return;
+
+    }
+
+    seeds = 0;
+    totalSeeds = 0;
+    totalClicks = 0;
+    treesChopped = 0;
+
+    buildings = [];
+    particles = [];
+    selected = null;
+
+    upgrades.forEach(upgrade => {
+
+        upgrade.owned = 0;
+
+    });
+
+    generateWorld();
+
+    calculateProduction();
+
+    camera.zoom = 1.5;
+
+    centerCamera();
+
+    updateDisplay();
+
+    saveGame();
+
+    showMessage("A brand new forest!");
+
+}
+
+
+// ========================================
+// AUTOMATIC SEED PRODUCTION
+// ========================================
+
+let lastProduction = performance.now();
+
+setInterval(() => {
+
+    const now = performance.now();
+
+    const elapsed = (now - lastProduction) / 1000;
+
+    lastProduction = now;
+
+    const earned = production * elapsed;
+
+    seeds += earned;
+
+    totalSeeds += earned;
+
+    updateDisplay();
+
+}, 200);
+
+
+// ========================================
+// GAME LOOP
+// ========================================
+
+function gameLoop() {
+
+    frame++;
+
+    updateCamera();
+
+    updateParticles();
+
+    drawWorld();
+
+    requestAnimationFrame(gameLoop);
+
+}
+
+
+// ========================================
+// START GAME
+// ========================================
+
+generateWorld();
+
+const loaded = loadGame();
+
+resizeCanvas();
+
+if (!loaded) {
+
+    centerCamera();
+
+}
+
+calculateProduction();
+
+createShop();
+
+updateDisplay();
+
+showMessage(
+    "Collect seeds and build your forest!"
+);
+
+setInterval(saveGame, 5000);
+
+window.addEventListener("pagehide", saveGame);
+
+gameLoop();
+
+</script>
+
+</body>
+</html>

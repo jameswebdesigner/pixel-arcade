@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Side Adventures</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #263b59, #080d19);
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    margin-top: 60px;
+    font-size: 48px;
+    color: gold;
+    text-shadow: 0 0 25px orange;
+}
+
+.subtitle {
+    color: #b9c9df;
+}
+
+.adventures {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 25px;
+    padding: 40px;
+}
+
+.adventure {
+    width: 250px;
+    padding: 25px;
+    border: 2px solid #70db65;
+    border-radius: 20px;
+    background: #142b24;
+    box-shadow: 0 0 20px #48c94b44;
+    transition: 0.3s;
+}
+
+.adventure:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 0 30px #48c94b88;
+}
+
+.game-icon {
+    font-size: 80px;
+}
+
+button {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    background: #70db65;
+    color: #102510;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    filter: brightness(1.2);
+}
+
+.locked {
+    background: #171d29;
+    border-color: #41495a;
+    box-shadow: none;
+    opacity: 0.5;
+}
+
+.locked:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.back {
+    background: #293850;
+    color: white;
+    margin-bottom: 30px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚔️ SIDE ADVENTURES</h1>
+
+<p class="subtitle">
+    You defeated the Sun. But your adventure isn't over!
+</p>
+
+<div class="adventures">
+
+    <div class="adventure">
+        <div class="game-icon">🌱</div>
+        <h2>Forest Clicker</h2>
+        <p>Collect seeds, buy upgrades and grow a magical forest!</p>
+
+        <button onclick="location.href='forest-clicker.html'">
+            PLAY
+        </button>
+    </div>
+
+    <div class="adventure locked">
+        <div class="game-icon">🔒</div>
+        <h2>???</h2>
+        <p>Coming Soon</p>
+    </div>
+
+    <div class="adventure locked">
+        <div class="game-icon">🔒</div>
+        <h2>???</h2>
+        <p>Coming Soon</p>
+    </div>
+
+</div>
+
+<button class="back"
+onclick="location.href='secret-access.html'">
+    Return to Portal
+</button>
+
+</body>
+</html>
