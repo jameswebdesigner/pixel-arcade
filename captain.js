@@ -157,16 +157,30 @@ let cutsceneStart = performance.now();
 
                 alert(
                     developerMode
-                        ? "🚀 DEVELOPER MODE ON! Press 1-7 to skip levels."
+                        ? "🚀 DEVELOPER MODE ON! Press 1-8 to skip levels."
                         : "🔒 Developer mode OFF!"
                 );
             }
         }
 
         // Developer level shortcuts
-        
+        // SECRET DEVELOPER ENEMY SUMMONING!
+if (developerMode && !event.repeat) {
+    const summonKeys = {
+        c: "Corp",
+        z: "Zorp",
+        b: "Borp",
+        s: "Slip"
+    };
+
+    const enemyName = summonKeys[key.toLowerCase()];
+
+    if (enemyName) {
+        summonEnemy(enemyName);
+    }
+}
         // SECRET LEVEL SKIP!
-        if (developerMode && /[1-7]$/.test(key)) {
+        if (developerMode && /[1-8]$/.test(key)) {
             const level = Number(key);
 
             if (level === 1) {
@@ -181,6 +195,7 @@ let cutsceneStart = performance.now();
             if (level === 5) loadLevel5();
             if (level === 6) loadLevel6();
             if (level === 7) loadLevel7();
+            if (level === 8) loadLevel8();
 
             // Resume gameplay after skipping
             gamePaused = false;
@@ -342,8 +357,293 @@ document.addEventListener("keyup", (event) => {
 });
 
 // Update the player's position
+// WORLD 2 - SLIDING PENGUIN ENEMIES
+let slips = [];
+
+function spawnSlip(x, floorY) {
+    slips.push({
+        x: x,
+        y: floorY - 24,
+        width: 44,
+        height: 24,
+        speed: 3,
+        direction: 1
+    });
+}
+function drawSlips() {
+
+    function drawSlip(slip) {
+        ctx.save();
+
+        ctx.translate(
+            slip.x + slip.width / 2 - cameraX,
+            slip.y + slip.height / 2
+        );
+
+        ctx.scale(slip.direction, 1);
+// Ice particles behind the penguin
+for (let i = 0; i < 8; i++) {
+    const drift = (performance.now() / 20 + i * 7) % 45;
+
+    ctx.globalAlpha = 1 - drift / 45;
+    ctx.fillStyle = "#b8f5ff";
+
+    ctx.beginPath();
+    ctx.arc(
+        -22 - drift,
+        10 - drift * 0.2 + Math.sin(i * 4) * 3,
+        2.5,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+}
+
+ctx.globalAlpha = 1;
+        // Black penguin body
+        ctx.fillStyle = "#18202b";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 20, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // White belly
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 16, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head
+        ctx.fillStyle = "#18202b";
+        ctx.beginPath();
+        ctx.arc(13, -6, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(17, -8, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(18, -8, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orange beak
+        ctx.fillStyle = "#ffaa00";
+        ctx.beginPath();
+        ctx.moveTo(21, -5);
+        ctx.lineTo(28, -2);
+        ctx.lineTo(21, 1);
+        ctx.fill();
+
+        // Flipper
+        ctx.fillStyle = "#354252";
+        ctx.beginPath();
+        ctx.ellipse(-5, 0, 10, 4, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+    // Draw original penguins only in World 2
+if (currentLevel >= 7) {
+    for (const slip of slips) {
+        drawSlip(slip);
+    }
+}
+
+// Draw developer-summoned penguins
+for (const enemy of summonedEnemies) {
+    if (enemy.name.toLowerCase() === "slip") {
+        drawSlip(enemy);
+
+        if (!enemy.active) {
+            const seconds = Math.max(1, Math.ceil(
+                (3000 - (performance.now() - enemy.spawnTime)) / 1000
+            ));
+
+            ctx.fillStyle = "#FF3333";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                seconds,
+                enemy.x + enemy.width / 2 - cameraX,
+                enemy.y - 25
+            );
+            ctx.textAlign = "left";
+        }
+    }
+}
+
+}
+function updateSlips() {
+    if (currentLevel < 7 || portalTraveling) return;
+
+    for (const slip of slips) {
+        const nextX = slip.x + slip.speed * slip.direction;
+
+        const frontX = slip.direction === 1
+            ? nextX + slip.width
+            : nextX;
+
+        const floorAhead = platforms.some(platform =>
+            frontX >= platform.x &&
+            frontX <= platform.x + platform.width &&
+            Math.abs(platform.y - (slip.y + slip.height)) < 5
+        );
+
+        if (!floorAhead) {
+            slip.direction *= -1;
+        } else {
+            slip.x = nextX;
+        }
+
+        // Damage Captain Pixel!
+        if (
+            player.x < slip.x + slip.width &&
+            player.x + player.width > slip.x &&
+            player.y < slip.y + slip.height &&
+            player.y + player.height > slip.y
+        ) {
+            resetPlayer();
+            return;
+        }
+    }
+}
+// DEVELOPER ENEMY SUMMONING SYSTEM
+let summonedEnemies = [];
+
+function summonEnemy(name) {
+    summonedEnemies.push({
+        name: name,
+        x: player.x,
+        y: player.y,
+        width: name.toLowerCase() === "zorp" ? alien.width :
+       name.toLowerCase() === "corp" ? corp.width :
+       name.toLowerCase() === "borp" ? borp.width :
+       name.toLowerCase() === "slip" ? 44 : 35,
+
+height: name.toLowerCase() === "zorp" ? alien.height :
+        name.toLowerCase() === "corp" ? corp.height :
+        name.toLowerCase() === "borp" ? borp.height :
+        name.toLowerCase() === "slip" ? 24 : 35,
+
+speed: name.toLowerCase() === "zorp" ? alien.speed :
+       name.toLowerCase() === "corp" ? corp.speed :
+       name.toLowerCase() === "borp" ? (borp.speed ?? 3) : 3,
+
+direction: 1,
+
+// END OF HWS
+health: 4,
+flashTimer: 0,
+dying: false,
+
+        spawnTime: performance.now(),
+        active: false,
+        velocityY: 0
+    });
+}
 function update() {
     if (gameWon) return;
+    // UPDATE SUMMONED ENEMIES
+for (const enemy of summonedEnemies) {
+
+    // Wait 3 seconds before attacking
+    if (performance.now() - enemy.spawnTime < 3000) {
+        continue;
+    }
+
+    enemy.active = true;
+    // Reduce the red flash timer
+if (enemy.flashTimer > 0) {
+    enemy.flashTimer--;
+}
+    // Enemy gravity
+const oldBottom = enemy.y + enemy.height;
+
+enemy.velocityY += 0.5;
+enemy.y += enemy.velocityY;
+
+// Land on platforms
+for (const platform of platforms) {
+    if (
+        enemy.x + enemy.width > platform.x &&
+        enemy.x < platform.x + platform.width &&
+        oldBottom <= platform.y &&
+        enemy.y + enemy.height >= platform.y &&
+        enemy.velocityY >= 0
+    ) {
+        enemy.y = platform.y - enemy.height;
+        enemy.velocityY = 0;
+    }
+}
+
+    // Chase Captain Pixel
+    if (enemy.x < player.x) {
+    enemy.x += enemy.speed;
+    enemy.direction = 1;
+}
+else if (enemy.x > player.x) {
+    enemy.x -= enemy.speed;
+    enemy.direction = -1;
+}
+    // STOMP SUMMONED BORP
+if (
+    enemy.name.toLowerCase() === "borp" &&
+    enemy.active &&
+    player.velocityY > 0 &&
+    player.x + player.width > enemy.x &&
+    player.x < enemy.x + enemy.width &&
+    player.y + player.height >= enemy.y &&
+    player.y + player.height <= enemy.y + 20
+) {
+    enemy.health--;
+    enemy.flashTimer = 15;
+    player.y = enemy.y - player.height;
+    player.velocityY = -12;
+
+    if (enemy.health <= 0) {
+        summonedEnemies.splice(
+            summonedEnemies.indexOf(enemy), 1
+        );
+    }
+
+    continue;
+}
+    // STOMP SUMMONED CORP
+if (
+    enemy.name.toLowerCase() === "corp" &&
+    enemy.active &&
+    player.velocityY > 0 &&
+    player.x + player.width > enemy.x &&
+    player.x < enemy.x + enemy.width &&
+    player.y + player.height >= enemy.y &&
+    player.y + player.height <= enemy.y + 15
+) {
+    summonedEnemies.splice(
+        summonedEnemies.indexOf(enemy), 1
+    );
+
+    // Bounce Captain Pixel upward
+    player.velocityY = -8;
+    break;
+}
+    // Summoned enemy damage
+if (
+    enemy.active &&
+    player.x < enemy.x + enemy.width &&
+    player.x + player.width > enemy.x &&
+    player.y < enemy.y + enemy.height &&
+    player.y + player.height > enemy.y
+) {
+    summonedEnemies = [];
+    resetPlayer();
+    break;
+}
+}
+    updateSlips();
+    const previousX = player.x;
     if (keys["ArrowRight"] && !portalTraveling) {
         player.x += player.speed;
         facingRight = true;
@@ -353,7 +653,23 @@ function update() {
         player.x -= player.speed;
         facingRight = false;
     }
+// SOLID PORTAL ICE COLLISION
+if (currentLevel >= 7 && !portalIceMelted) {
 
+    const iceLeft = finishFlag.x - 45;
+    const iceRight = finishFlag.x + 55;
+    const iceTop = finishFlag.y - 40;
+    const iceBottom = finishFlag.y + 80;
+
+    if (
+        player.x + player.width > iceLeft &&
+        player.x < iceRight &&
+        player.y + player.height > iceTop &&
+        player.y < iceBottom
+    ) {
+        player.x = previousX;
+    }
+}
     if (keys["Space"] && !player.jumping && !portalTraveling) {
         player.velocityY = jumpPower;
         player.jumping = true;
@@ -363,7 +679,41 @@ function update() {
 
     player.velocityY += gravity;
     player.y += player.velocityY;
+// VERTICAL ICE COLLISION
+if (currentLevel >= 7 && !portalIceMelted) {
 
+    const iceLeft = finishFlag.x - 45;
+    const iceRight = finishFlag.x + 55;
+    const iceTop = finishFlag.y - 40;
+    const iceBottom = finishFlag.y + 80;
+
+    if (
+        player.x + player.width > iceLeft &&
+        player.x < iceRight
+    ) {
+
+        // Land on top of the ice
+        if (
+            previousBottom <= iceTop &&
+            player.y + player.height >= iceTop &&
+            player.velocityY >= 0
+        ) {
+            player.y = iceTop - player.height;
+            player.velocityY = 0;
+            player.jumping = false;
+        }
+
+        // Hit the ice from underneath
+        else if (
+            previousBottom - player.height >= iceBottom &&
+            player.y <= iceBottom &&
+            player.velocityY < 0
+        ) {
+            player.y = iceBottom;
+            player.velocityY = 0;
+        }
+    }
+}
     // Check if player lands on a platform
     for (const platform of platforms) {
         const playerBottom = player.y + player.height;
@@ -557,7 +907,9 @@ worldVictoryMusic.play().catch(error => {
     gameWon = true;
 }
 else if (currentLevel === 7) {
-    // WORLD 2 - FROZEN LANDING COMPLETE!
+    loadLevel8();
+}
+else if (currentLevel === 8) {
     portalTraveling = false;
     gameWon = true;
 }
@@ -1275,7 +1627,7 @@ if (currentLevel >= 7) {
 ctx.shadowBlur = 0;
 }
 // LEVEL 6 - GIANT GREEN BORP!
-if (currentLevel === 6 && !borp.defeated) {
+function drawBorp(borp) {
     ctx.save();
     if (borp.dying) {
     // BORP'S DRAMATIC DEATH SHAKE!
@@ -1395,6 +1747,33 @@ ctx.lineWidth = 2;
 ctx.strokeRect(borp.x, borp.y - 45, 90, 12);
     ctx.restore();
 
+}
+// Draw the original Borp
+if (currentLevel === 6 && !borp.defeated) {
+    drawBorp(borp);
+}
+// Draw developer-summoned Borps
+for (const enemy of summonedEnemies) {
+    if (enemy.name.toLowerCase() === "borp") {
+        drawBorp(enemy);
+
+        // 3 second countdown
+        if (!enemy.active) {
+            const seconds = Math.max(1, Math.ceil(
+                (3000 - (performance.now() - enemy.spawnTime)) / 1000
+            ));
+
+            ctx.fillStyle = "#FF3333";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                seconds,
+                enemy.x + enemy.width / 2,
+                enemy.y - 65
+            );
+            ctx.textAlign = "left";
+        }
+    }
 }
 
 // DRAW RED TRIANGULAR SPIKES
@@ -1549,8 +1928,9 @@ if (portalTraveling) {
     drawCaptainPixel();
 }
 ctx.restore(); // Stop moving the camera
+drawSlips();
 // WORLD 2 - GIANT ICE CRYSTAL TRAPPING THE PORTAL!
-if (currentLevel === 7 && !portalIceMelted) {
+if (currentLevel >= 7 && !portalIceMelted) {
     ctx.save();
 
     const iceCenterX = finishFlag.x + 5 - cameraX;
@@ -1588,7 +1968,7 @@ ctx.translate(-iceCenterX, -(iceCenterY + 45));
     ctx.restore();
 }
 // WORLD 2 - CAPTAIN PIXEL'S FIRE BLAST!
-if (currentLevel === 7 && portalFireBlasting) {
+if (currentLevel >= 7 && portalFireBlasting) {
     const fireTime = performance.now() - portalFireStart;
 
     if (fireTime < 800) {
@@ -1626,7 +2006,7 @@ if (currentLevel === 7 && portalFireBlasting) {
 }
 }
 // WORLD 2 - FROZEN PORTAL INSTRUCTIONS!
-if (currentLevel === 7 && !portalIceMelted) {
+if (currentLevel >= 7 && !portalIceMelted) {
     const distanceToPortal = Math.abs(
         (player.x + player.width / 2) - (finishFlag.x + 5)
     );
@@ -1817,12 +2197,8 @@ ctx.fillText(
 
 ctx.textAlign = "left";
 
- // DRAW ZORP ON LEVEL 3
-if (currentLevel === 3) {
-
- // DRAW THE ALIEN ON LEVEL 3
-if (currentLevel === 3) {
-
+ // REUSABLE ZORP SPRITE
+function drawZorp(alien) {
     
     
     // ZORP'S WOBBLING BODY!
@@ -1905,7 +2281,7 @@ ctx.translate(
         3,
         3
     );
-}
+
 
  // DISPLAY ZORP'S NAME
 ctx.fillStyle = "#ffffff";
@@ -1921,10 +2297,38 @@ ctx.fillText(
 ctx.textAlign = "left";
 ctx.restore();
 }
+// Draw the original Zorp
+if (currentLevel === 3) {
+    drawZorp(alien);
+}
+// Draw summoned Zorps
+for (const enemy of summonedEnemies) {
+    if (enemy.name.toLowerCase() === "zorp") {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+        drawZorp(enemy);
+        // 3 SECOND WARNING
+if (!enemy.active) {
+    const seconds = Math.max(1, Math.ceil(
+        (3000 - (performance.now() - enemy.spawnTime)) / 1000
+    ));
+
+    ctx.fillStyle = "#FF3333";
+    ctx.font = "bold 30px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        seconds,
+        enemy.x + enemy.width / 2,
+        enemy.y - 35
+    );
+}
+        ctx.restore();
+    }
+}
 
  // DRAW CORP
-if (currentLevel === 4 && !corp.defeated) {
-
+function drawCorp(corp) {
     // CORP'S WOBBLY WALK!
     // CORP'S JELLYBEAN SINE WAVE DANCE!
 const corpTime = Date.now() / 1000;
@@ -2022,7 +2426,38 @@ const corpSquish =
     ctx.textAlign = "left";
     ctx.restore();
 }
+// Draw the original Corp
+if (currentLevel === 4 && !corp.defeated) {
+    drawCorp(corp);
+}
 
+// Draw summoned Corps
+for (const enemy of summonedEnemies) {
+    if (enemy.name.toLowerCase() === "corp") {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        drawCorp(enemy);
+
+        // 3 second countdown
+        if (!enemy.active) {
+            const seconds = Math.max(1, Math.ceil(
+                (3000 - (performance.now() - enemy.spawnTime)) / 1000
+            ));
+
+            ctx.fillStyle = "#FF3333";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(
+                seconds,
+                enemy.x + enemy.width / 2,
+                enemy.y - 35
+            );
+        }
+
+        ctx.restore();
+    }
+}
 // LEVEL INSTRUCTIONS
 let instructions = "";
 
@@ -2380,6 +2815,7 @@ player.jumping = true;
 }
 // WORLD 2 - LEVEL 1: THE FROZEN LANDING!
 function loadLevel7() {
+    slips = [];
     currentLevel = 7;
 
     // RESET FIRE POWER CELEBRATION!
@@ -2441,6 +2877,79 @@ spikes = [];
     ];
 
     // Captain Pixel lands on the frozen planet!
+    player.x = 60;
+    player.y = 300;
+    player.velocityY = 0;
+    player.jumping = true;
+}
+// WORLD 2 - LEVEL 8: FROZEN CAVERNS
+function loadLevel8() {
+    currentLevel = 8;
+
+    firePowerMaxedShown = false;
+    firePowerMaxedStart = 0;
+
+    portalIceMelted = false;
+    portalFireBlasting = false;
+    portalFireStart = 0;
+
+    rocketLandingPlaying = false;
+
+    gameWon = false;
+    portalTraveling = false;
+    portalTravelStart = null;
+    portalOpeningStart = null;
+
+    worldWidth = 4000;
+    cameraX = 0;
+
+    spikes = [];
+
+    finishFlag.x = 3850;
+    finishFlag.y = 340;
+
+    platforms = [
+        // Ground with dangerous gaps
+        { x: 0, y: 410, width: 600, height: 40 },
+        { x: 750, y: 410, width: 550, height: 40 },
+        { x: 1450, y: 410, width: 550, height: 40 },
+        { x: 2150, y: 410, width: 550, height: 40 },
+        { x: 2850, y: 410, width: 450, height: 40 },
+        { x: 3450, y: 410, width: 550, height: 40 },
+
+        // Floating ice platforms
+        { x: 250, y: 340, width: 140, height: 20 },
+        { x: 550, y: 350, width: 180, height: 20 },
+        { x: 950, y: 310, width: 150, height: 20 },
+        { x: 1250, y: 340, width: 180, height: 20 },
+        { x: 1650, y: 280, width: 150, height: 20 },
+        { x: 1950, y: 350, width: 180, height: 20 },
+        { x: 2400, y: 300, width: 150, height: 20 },
+        { x: 2650, y: 340, width: 180, height: 20 },
+        { x: 3050, y: 290, width: 150, height: 20 },
+        { x: 3250, y: 350, width: 180, height: 20 },
+        { x: 3600, y: 320, width: 150, height: 20 }
+    ];
+// SPAWN SLIDING PENGUINS
+slips = [];
+
+spawnSlip(950, 410);
+spawnSlip(1700, 410);
+spawnSlip(2400, 410);
+    // Fire orbs
+    coins = [
+        { x: 320, y: 280, collected: false },
+        { x: 640, y: 290, collected: false },
+        { x: 1025, y: 250, collected: false },
+        { x: 1340, y: 280, collected: false },
+        { x: 1725, y: 220, collected: false },
+        { x: 2040, y: 290, collected: false },
+        { x: 2475, y: 240, collected: false },
+        { x: 2740, y: 280, collected: false },
+        { x: 3125, y: 230, collected: false },
+        { x: 3675, y: 260, collected: false }
+    ];
+
     player.x = 60;
     player.y = 300;
     player.velocityY = 0;
@@ -2956,8 +3465,8 @@ document.addEventListener("keydown", startMusic);
 document.addEventListener("keydown", (event) => {
     if (event.key.toLowerCase() !== "f") return;
 
-    // Only works in World 2, Level 7
-    if (currentLevel !== 7 || portalIceMelted) return;
+    // Works on all Ice Planet levels
+if (currentLevel < 7 || portalIceMelted || portalFireBlasting) return;
 
     // Captain Pixel needs ALL the Fire Orbs!
     if (!coins.every(coin => coin.collected)) return;

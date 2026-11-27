@@ -105,8 +105,10 @@ ctx.globalAlpha = fadeAmount;
     ? Math.sin(time * 8) * 4
     : 0;
 
-    ctx.strokeStyle = "#79502d";
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = snip.practiceSnip
+    ? "#b5bd75"
+    : "#79502d";
+    ctx.lineWidth = snip.practiceSnip ? 6 : 4;
     ctx.lineCap = "round";
 
     ctx.beginPath();
@@ -201,7 +203,8 @@ function spawnSnip(x, y, room) {
         x: x,
         y: y,
         room: room,
-        color: randomSnipColor(),
+        color: room === 3 ? "#929b50" : randomSnipColor(),
+practiceSnip: room === 3,
 health: 2,
 hitTime: 0,
 isMoving: false,
@@ -210,7 +213,7 @@ moveStartTime: 0,
 moveDuration: 700,
 moveDirectionX: 0,
 moveDirectionY: 0,
-speed: 3
+speed: room === 3 ? 1.5 : 3
     };
 
     snips.push(snip);
@@ -335,6 +338,16 @@ function drawForest() {
     
 }
 let fallingIntoHole = false;
+// CAVE PRESSURE PLATE SETTINGS
+let plateX = 250;
+let plateY = 400;
+let plateRadius = 30;
+let wasOnPlate = false;
+let targetX = 700;
+let targetY = 280;
+let targetFlashUntil = 0;
+let targetSpeed = 0.002;
+let targetMoveDistance = 100;
 let fallStartTime = 0;
 function drawCave() {
     if (currentRoom !== 3) return;
@@ -348,9 +361,50 @@ ctx.fillRect(0, 0, canvas.width, 35);
 ctx.fillRect(0, canvas.height - 35, canvas.width, 35);
 ctx.fillRect(0, 0, 35, canvas.height);
 ctx.fillRect(canvas.width - 35, 0, 35, canvas.height);
+// SNIP PRESSURE PLATE
+const snipAlive = snips.some(
+    snip => snip.room === 3 && !snip.defeated
+);
+
+ctx.save();
+
+ctx.translate(plateX, plateY);
+
+// Metal base
+ctx.fillStyle = "#333333";
+ctx.beginPath();
+ctx.arc(0, 0, plateRadius + 6, 0, Math.PI * 2);
+ctx.fill();
+
+// Glowing button
+ctx.fillStyle = snipAlive ? "#ff3333" : "#00ff66";
+ctx.shadowColor = ctx.fillStyle;
+ctx.shadowBlur = 15;
+
+ctx.beginPath();
+ctx.arc(0, 0, plateRadius, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.shadowBlur = 0;
+
+// Button instructions
+ctx.fillStyle = "white";
+ctx.font = "bold 14px Arial";
+ctx.textAlign = "center";
+
+ctx.fillText(
+    snipAlive ? "SNIP ACTIVE" : "SPAWN SNIP",
+    0, -45
+);
+
+ctx.restore();
 // Wooden archery target
 ctx.save();
-ctx.translate(700, 280);
+targetY = 280 + Math.sin(
+    performance.now() * targetSpeed
+) * targetMoveDistance;
+
+ctx.translate(targetX, targetY);
 
 // Wooden stand
 ctx.fillStyle = "#79502d";
@@ -366,7 +420,10 @@ const rings = [
 ];
 
 for (const [radius, color] of rings) {
-    ctx.fillStyle = color;
+    ctx.fillStyle =
+    performance.now() < targetFlashUntil
+        ? "#00ff66"
+        : color;
     ctx.beginPath();
     ctx.arc(0, 0, radius, 0, Math.PI * 2);
     ctx.fill();
@@ -1088,6 +1145,27 @@ function drawGameOver() {
     ctx.textAlign = "left";
 }
 function gameLoop() {
+    // CAVE PRESSURE PLATE ACTIVATION
+if (currentRoom === 3) {
+
+    const onPlate = Math.hypot(
+        player.x - plateX,
+        player.y - plateY
+    ) < plateRadius;
+
+    const snipAlive = snips.some(
+        snip => snip.room === 3 && !snip.defeated
+    );
+
+    if (onPlate && !wasOnPlate && !snipAlive) {
+        spawnSnip(500, 400, 3);
+    }
+
+    wasOnPlate = onPlate;
+
+} else {
+    wasOnPlate = false;
+}
     updateSnips();
     // Move Blue Blob
     // BLUE BLOB MOVEMENT AND DODGE ROLL
@@ -1125,7 +1203,20 @@ const doorwayBottom = canvas.height / 2 + 65;
 const insideDoorway =
     player.y >= doorwayTop &&
     player.y <= doorwayBottom;
-    
+    // UNDERGROUND CAVE EXITS
+if (currentRoom === 3 && insideDoorway) {
+    if (player.x < 0 || player.x > canvas.width) {
+
+        currentRoom = 0;
+
+        player.x = 450;
+        player.y = 250;
+
+        arrows.length = 0;
+        isDodging = false;
+        isCharging = false;
+    }
+}
 // WEST EXIT
 if (player.x < 0 && insideDoorway) {
     if (currentRoom === 0) {
@@ -1317,7 +1408,7 @@ if (
     seed.y > canvas.height
 ) {
     // Only 1 out of 4 seeds will grow!
-    if (Math.random() < 0.25) {
+    if (seed.room !== 3 && Math.random() < 0.25) {
 
         // Keep the new Snip inside the forest
         const newX = Math.max(40, Math.min(canvas.width - 40, seed.x));
@@ -1337,12 +1428,38 @@ if (
 // UPDATE AND DRAW ARROWS
 for (let i = arrows.length - 1; i >= 0; i--) {
     const arrow = arrows[i];
+    // FOLLOW THE MOVING TARGET
+if (arrow.stuckToTarget && currentRoom === 3) {
+    arrow.x = targetX + arrow.targetOffsetX;
+    arrow.y = targetY + arrow.targetOffsetY;
+}
 
     // Move only if the arrow is not stuck
 if (!arrow.stuck) {
     arrow.x += Math.cos(arrow.angle) * arrow.speed;
     arrow.y += Math.sin(arrow.angle) * arrow.speed;
+// TRAINING TARGET COLLISION
+if (currentRoom === 3) {
 
+    const tipX = arrow.x + Math.cos(arrow.angle) * 20;
+    const tipY = arrow.y + Math.sin(arrow.angle) * 20;
+
+    const targetDistance = Math.hypot(
+        tipX - targetX,
+        tipY - targetY
+    );
+
+    if (targetDistance < 30) {
+        targetFlashUntil = performance.now() + 200;
+
+        arrow.stuck = true;
+        arrow.stuckTime = performance.now();
+
+        arrow.stuckToTarget = true;
+        arrow.targetOffsetX = arrow.x - targetX;
+        arrow.targetOffsetY = arrow.y - targetY;
+    }
+}
     // Check collision with trees in this room
     const trees = forestRooms[currentRoom].trees;
 
