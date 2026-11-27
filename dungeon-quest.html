@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Roman: Dungeon Quest</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #11111c;
+    color: white;
+    font-family: monospace;
+    text-align: center;
+}
+
+h1 {
+    color: #eac66a;
+    margin: 12px;
+    text-shadow: 0 0 15px #d8a43866;
+}
+
+#hud {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 12px;
+    font-size: 17px;
+}
+
+canvas {
+    background: #22222c;
+    border: 5px solid #555566;
+    max-width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+}
+
+button {
+    background: #35354c;
+    color: white;
+    border: 2px solid #777795;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin: 4px;
+    font: bold 14px monospace;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #55557a;
+}
+
+#message {
+    color: #ffe19a;
+    min-height: 28px;
+    padding: 6px;
+}
+
+#shop {
+    display: none;
+    background: #242438;
+    border: 3px solid gold;
+    border-radius: 12px;
+    max-width: 800px;
+    margin: 10px auto;
+    padding: 15px;
+}
+
+#controls {
+    color: #aaaabb;
+    padding: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚔️ ROMAN: DUNGEON QUEST</h1>
+
+<div id="hud">
+    <span id="health"></span>
+    <span id="coins"></span>
+    <span id="potions"></span>
+    <span id="weapon"></span>
+    <span id="floor"></span>
+    <span id="keyCount"></span>
+</div>
+
+<canvas id="game" width="960" height="576"></canvas>
+
+<div id="message">
+    Welcome, Roman! Defeat the monsters and find the key!
+</div>
+
+<div id="shop">
+    <h2>🏪 Dungeon Merchant</h2>
+
+    <button onclick="buy('sword')">
+        Upgrade Sword — 75 Coins
+    </button>
+
+    <button onclick="buy('potion')">
+        Health Potion — 20 Coins
+    </button>
+
+    <button onclick="buy('armor')">
+        Upgrade Armor — 100 Coins
+    </button>
+
+    <button onclick="buy('heal')">
+        Full Heal — 30 Coins
+    </button>
+
+    <button onclick="nextFloor()">
+        Enter Next Floor
+    </button>
+</div>
+
+<div id="controls">
+    WASD / Arrows: Move |
+    SPACE: Sword |
+    E: Interact |
+    Q: Potion |
+    SHIFT: Dodge
+</div>
+
+<button onclick="saveGame(true)">Save Game</button>
+<button onclick="resetGame()">Full Reset</button>
+<button onclick="saveGame(); location.href='side-adventures.html'">
+    Exit
+</button>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const TILE = 48;
+const COLS = 20;
+const ROWS = 12;
+const SAVE_KEY = "romanDungeonQuestV1";
+
+let floor = 1;
+let coins = 0;
+let potions = 3;
+let swordLevel = 1;
+let armorLevel = 1;
+let hasKey = false;
+
+let world = [];
+let enemies = [];
+let chests = [];
+let particles = [];
+let projectiles = [];
+
+let frame = 0;
+let gameOver = false;
+let victory = false;
+let shopping = false;
+
+let attackCooldown = 0;
+let attackAnimation = 0;
+let dodgeCooldown = 0;
+let dodgeTimer = 0;
+let hurtTimer = 0;
+
+const roman = {
+    x: 120,
+    y: 120,
+    health: 100,
+    maxHealth: 100,
+    direction: 1,
+    moving: false,
+    aimX: 1,
+    aimY: 0
+};
+
+const keys = {};
+
+const weapons = [
+    "Iron Sword",
+    "Steel Sword",
+    "Knight's Blade",
+    "Crystal Sword",
+    "Flame Sword",
+    "Shadow Blade",
+    "Legendary Excalibur"
+];
+
+function message(text) {
+    document.getElementById("message").textContent = text;
+}
+
+function updateHUD() {
+
+    document.getElementById("health").textContent =
+        "❤️ " + Math.ceil(roman.health) + "/" + roman.maxHealth;
+
+    document.getElementById("coins").textContent =
+        "🪙 " + coins;
+
+    document.getElementById("potions").textContent =
+        "🧪 " + potions;
+
+    document.getElementById("weapon").textContent =
+        "⚔️ " + weapons[Math.min(swordLevel - 1, 6)];
+
+    document.getElementById("floor").textContent =
+        "Floor " + floor + "/20";
+
+    document.getElementById("keyCount").textContent =
+        hasKey ? "🔑 Key Found" : "🔒 No Key";
+}
+
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max-min+1)) + min;
+}
+
+function generateDungeon() {
+
+    world = [];
+    enemies = [];
+    chests = [];
+    particles = [];
+    projectiles = [];
+
+    hasKey = false;
+    shopping = false;
+
+    document.getElementById("shop").style.display = "none";
+
+    roman.x = TILE * 2.5;
+    roman.y = TILE * 2.5;
+
+    for (let y = 0; y < ROWS; y++) {
+
+        const row = [];
+
+        for (let x = 0; x < COLS; x++) {
+
+            let type = "floor";
+
+            if (
+                x === 0 ||
+                y === 0 ||
+                x === COLS-1 ||
+                y === ROWS-1
+            ) {
+                type = "wall";
+            }
+
+            row.push(type);
+        }
+
+        world.push(row);
+    }
+
+    const bossFloor = floor % 5 === 0;
+
+    if (!bossFloor) {
+
+        // Random dungeon walls with doorways.
+        for (const wallX of [6, 12]) {
+
+            const gap = randomInt(3, 8);
+
+            for (let y = 2; y < ROWS-2; y++) {
+
+                if (Math.abs(y-gap) > 1) {
+                    world[y][wallX] = "wall";
+                }
+            }
+        }
+
+        // Traps.
+        for (let i = 0; i < 5 + floor; i++) {
+
+            const x = randomInt(4, COLS-3);
+            const y = randomInt(2, ROWS-3);
+
+            if (world[y][x] === "floor") {
+                world[y][x] =
+                    Math.random() < .3 && floor >= 4
+                    ? "lava"
+                    : "spikes";
+            }
+        }
+    }
+
+    world[ROWS-2][COLS-2] = "exit";
+
+    if (bossFloor) {
+
+        spawnBoss();
+
+        message("⚠️ BOSS FLOOR! Prepare yourself, Roman!");
+
+    } else {
+
+        for (let i = 0; i < 4 + Math.floor(floor * .6); i++) {
+
+            const spot = randomFloorTile();
+
+            enemies.push({
+                x: spot.x,
+                y: spot.y,
+                type: Math.random() < .5 ? "slime" : "skeleton",
+                hp: 20 + floor * 5,
+                maxHP: 20 + floor * 5,
+                speed: 1 + floor * .035,
+                cooldown: 0,
+                flash: 0,
+                boss: false
+            });
+        }
+
+        message("Defeat every monster to receive the dungeon key!");
+    }
+
+    for (let i = 0; i < 3; i++) {
+
+        const spot = randomFloorTile();
+
+        chests.push({
+            x: spot.x,
+            y: spot.y,
+            opened: false
+        });
+    }
+
+    updateHUD();
+}
+
+function randomFloorTile() {
+
+    for (let i = 0; i < 500; i++) {
+
+        const x = randomInt(4, COLS-3);
+        const y = randomInt(2, ROWS-3);
+
+        const px = x*TILE + TILE/2;
+        const py = y*TILE + TILE/2;
+
+        if (
+            world[y][x] === "floor" &&
+            !enemies.some(e => Math.hypot(e.x-px,e.y-py)<40) &&
+            !chests.some(c => Math.hypot(c.x-px,c.y-py)<40)
+        ) {
+            return {x:px, y:py};
+        }
+    }
+
+    return {x:720,y:240};
+}
+
+function spawnBoss() {
+
+    const names = {
+        5: "Skeleton King",
+        10: "Lava Golem",
+        15: "Shadow Knight",
+        20: "Dungeon King"
+    };
+
+    const hp = 180 + floor * 22;
+
+    enemies.push({
+        x: 700,
+        y: 280,
+        type: names[floor],
+        hp,
+        maxHP: hp,
+        speed: 1.15 + floor*.025,
+        cooldown: 0,
+        flash: 0,
+        shootTimer: 0,
+        boss: true
+    });
+}
+
+function tileAt(x,y) {
+
+    return world[Math.floor(y/TILE)]
+        ?.[Math.floor(x/TILE)];
+}
+
+function canWalk(x,y,radius=10) {
+
+    for (const ox of [-radius,radius]) {
+
+        for (const oy of [-radius,radius]) {
+
+            const tile = tileAt(x+ox,y+oy);
+
+            if (!tile || tile === "wall") return false;
+        }
+    }
+
+    return true;
+}
+
+function burst(x,y,color,count) {
+
+    for (let i = 0; i < count; i++) {
+
+        particles.push({
+            x,y,color,
+            vx:(Math.random()-.5)*6,
+            vy:(Math.random()-.5)*6,
+            life:30
+        });
+    }
+}
+
+function attack() {
+
+    if (
+        attackCooldown > 0 ||
+        gameOver ||
+        victory ||
+        shopping
+    ) return;
+
+    attackCooldown = 24;
+    attackAnimation = 12;
+
+    const damage = 12 + swordLevel * 8;
+
+    for (const e of enemies) {
+
+        const dx = e.x-roman.x;
+        const dy = e.y-roman.y;
+
+        const distance = Math.hypot(dx,dy);
+
+        if (distance < (e.boss ? 100 : 75)) {
+
+            e.hp -= damage;
+            e.flash = 10;
+
+            burst(e.x,e.y,"#ffe9a0",12);
+
+            if (!e.boss) {
+
+                const d = distance || 1;
+
+                const nx = e.x+dx/d*15;
+                const ny = e.y+dy/d*15;
+
+                if (canWalk(nx,ny)) {
+                    e.x = nx;
+                    e.y = ny;
+                }
+            }
+        }
+    }
+}
+
+function dodge() {
+
+    if (
+        dodgeCooldown > 0 ||
+        gameOver ||
+        victory ||
+        shopping
+    ) return;
+
+    dodgeTimer = 12;
+    dodgeCooldown = 90;
+}
+
+function hurt(amount) {
+
+    if (hurtTimer > 0 || dodgeTimer > 0) return;
+
+    const damage = Math.max(
+        1,
+        amount - (armorLevel-1)*2
+    );
+
+    roman.health -= damage;
+    hurtTimer = 50;
+
+    burst(roman.x,roman.y,"#ff5555",15);
+
+    if (roman.health <= 0) {
+
+        roman.health = 0;
+        gameOver = true;
+
+        message("Roman has fallen!");
+
+        saveGame();
+    }
+
+    updateHUD();
+}
+
+function drinkPotion() {
+
+    if (gameOver || victory || shopping) return;
+
+    if (potions <= 0) {
+        message("No health potions!");
+        return;
+    }
+
+    if (roman.health >= roman.maxHealth) {
+        message("Your health is already full!");
+        return;
+    }
+
+    potions--;
+
+    roman.health = Math.min(
+        roman.maxHealth,
+        roman.health+40
+    );
+
+    burst(roman.x,roman.y,"#ff66aa",25);
+
+    message("Potion used! Restored up to 40 health.");
+
+    updateHUD();
+}
+
+function interact() {
+
+    if (gameOver || victory || shopping) return;
+
+    for (const chest of chests) {
+
+        if (
+            !chest.opened &&
+            Math.hypot(
+                roman.x-chest.x,
+                roman.y-chest.y
+            ) < 65
+        ) {
+
+            chest.opened = true;
+
+            const roll = Math.random();
+
+            if (roll < .55) {
+
+                const reward = randomInt(20,50) + floor*3;
+
+                coins += reward;
+
+                message("Treasure found! +" + reward + " coins!");
+
+            } else if (roll < .85) {
+
+                potions += 2;
+
+                message("Found two health potions!");
+
+            } else {
+
+                swordLevel++;
+
+                message(
+                    "RARE TREASURE! Sword upgraded to level " +
+                    swordLevel
+                );
+            }
+
+            burst(chest.x,chest.y,"gold",30);
+
+            updateHUD();
+
+            return;
+        }
+    }
+
+    const exitX = (COLS-1.5)*TILE;
+    const exitY = (ROWS-1.5)*TILE;
+
+    if (
+        Math.hypot(roman.x-exitX,roman.y-exitY) < 65
+    ) {
+
+        if (!hasKey) {
+
+            message("The door is locked! Defeat every monster.");
+
+            return;
+        }
+
+        if (floor === 20) {
+
+            victory = true;
+
+            try {
+                localStorage.setItem("dungeonQuestVictory","true");
+            } catch {}
+
+            message("🏆 ROMAN HAS CONQUERED THE DUNGEON!");
+
+            saveGame();
+
+        } else {
+
+            shopping = true;
+
+            document.getElementById("shop").style.display = "block";
+
+            message("Floor cleared! Visit the Dungeon Merchant.");
+
+            saveGame();
+        }
+
+        return;
+    }
+
+    message("Move closer to a chest or the exit door.");
+}
+
+function buy(type) {
+
+    if (!shopping) return;
+
+    const prices = {
+        sword:75,
+        potion:20,
+        armor:100,
+        heal:30
+    };
+
+    if (coins < prices[type]) {
+
+        message("Not enough coins!");
+
+        return;
+    }
+
+    if (type === "heal" && roman.health === roman.maxHealth) {
+
+        message("Your health is already full!");
+
+        return;
+    }
+
+    coins -= prices[type];
+
+    if (type === "sword") swordLevel++;
+    if (type === "armor") armorLevel++;
+    if (type === "potion") potions++;
+    if (type === "heal") roman.health = roman.maxHealth;
+
+    message("Purchase successful!");
+
+    updateHUD();
+    saveGame();
+}
+
+function nextFloor() {
+
+    if (!shopping) return;
+
+    floor++;
+
+    roman.health = Math.min(
+        roman.maxHealth,
+        roman.health+15
+    );
+
+    generateDungeon();
+
+    saveGame();
+}
+
+window.addEventListener("keydown",e => {
+
+    const key = e.key.toLowerCase();
+
+    keys[key] = true;
+
+    if (
+        [" ","arrowup","arrowdown","arrowleft","arrowright"]
+        .includes(key)
+    ) e.preventDefault();
+
+    if (e.repeat) return;
+
+    if (key === " ") attack();
+    if (key === "shift") dodge();
+    if (key === "q") drinkPotion();
+    if (key === "e") interact();
+});
+
+window.addEventListener("keyup",e => {
+
+    keys[e.key.toLowerCase()] = false;
+});
+
+window.addEventListener("blur",() => {
+
+    for (const key in keys) keys[key] = false;
+});
+
+function bossAttack(e) {
+
+    const count = floor === 20 ? 16 : 8;
+
+    for (let i = 0; i < count; i++) {
+
+        const angle = i/count*Math.PI*2 + frame*.02;
+
+        projectiles.push({
+            x:e.x,
+            y:e.y,
+            vx:Math.cos(angle)*3.5,
+            vy:Math.sin(angle)*3.5,
+            life:240
+        });
+    }
+}
+
+function update() {
+
+    if (gameOver || victory || shopping) return;
+
+    frame++;
+
+    if (attackCooldown > 0) attackCooldown--;
+    if (attackAnimation > 0) attackAnimation--;
+    if (dodgeCooldown > 0) dodgeCooldown--;
+    if (dodgeTimer > 0) dodgeTimer--;
+    if (hurtTimer > 0) hurtTimer--;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (keys.w || keys.arrowup) dy--;
+    if (keys.s || keys.arrowdown) dy++;
+    if (keys.a || keys.arrowleft) dx--;
+    if (keys.d || keys.arrowright) dx++;
+
+    const distance = Math.hypot(dx,dy);
+
+    roman.moving = distance > 0;
+
+    if (distance > 0) {
+
+        roman.aimX = dx/distance;
+        roman.aimY = dy/distance;
+
+        if (dx !== 0) roman.direction = Math.sign(dx);
+    }
+
+    const speed = dodgeTimer > 0 ? 9 : 3.2;
+
+    if (distance > 0 || dodgeTimer > 0) {
+
+        dx = roman.aimX*speed;
+        dy = roman.aimY*speed;
+
+        if (canWalk(roman.x+dx,roman.y)) roman.x += dx;
+        if (canWalk(roman.x,roman.y+dy)) roman.y += dy;
+    }
+
+    if (keys[" "]) attack();
+
+    const tile = tileAt(roman.x,roman.y);
+
+    if (tile === "lava") hurt(12);
+
+    if (
+        tile === "spikes" &&
+        frame % 120 < 60
+    ) hurt(8);
+
+    for (let i = enemies.length-1; i >= 0; i--) {
+
+        const e = enemies[i];
+
+        if (e.hp <= 0) {
+
+            coins += e.boss ? 200 : 10+floor*2;
+
+            burst(e.x,e.y,"#e5c675",25);
+
+            enemies.splice(i,1);
+
+            updateHUD();
+
+            continue;
+        }
+
+        if (e.flash > 0) e.flash--;
+        if (e.cooldown > 0) e.cooldown--;
+
+        const dx = roman.x-e.x;
+        const dy = roman.y-e.y;
+        const d = Math.hypot(dx,dy) || 1;
+
+        const nx = e.x+dx/d*e.speed;
+        const ny = e.y+dy/d*e.speed;
+
+        const radius = e.boss ? 25 : 10;
+
+        if (d > (e.boss ? 40 : 20)) {
+
+            if (canWalk(nx,e.y,radius)) e.x = nx;
+            if (canWalk(e.x,ny,radius)) e.y = ny;
+        }
+
+        if (
+            d < (e.boss ? 50 : 26) &&
+            e.cooldown <= 0
+        ) {
+
+            hurt(e.boss ? 18 : 7+Math.floor(floor/4));
+
+            e.cooldown = 60;
+        }
+
+        if (e.boss) {
+
+            e.shootTimer++;
+
+            if (e.shootTimer >= 120) {
+
+                bossAttack(e);
+
+                e.shootTimer = 0;
+            }
+        }
+    }
+
+    if (enemies.length === 0 && !hasKey) {
+
+        hasKey = true;
+
+        message("🔑 Dungeon key earned! Find the golden exit door.");
+
+        burst(roman.x,roman.y,"gold",40);
+
+        updateHUD();
+    }
+
+    for (let i = projectiles.length-1; i >= 0; i--) {
+
+        const p = projectiles[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+
+        if (
+            Math.hypot(p.x-roman.x,p.y-roman.y) < 20
+        ) {
+
+            hurt(12);
+
+            projectiles.splice(i,1);
+
+        } else if (
+            p.life <= 0 ||
+            tileAt(p.x,p.y) === "wall"
+        ) {
+
+            projectiles.splice(i,1);
+        }
+    }
+
+    for (let i = particles.length-1; i >= 0; i--) {
+
+        const p = particles[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+
+        if (p.life <= 0) particles.splice(i,1);
+    }
+}
+
+function rect(x,y,w,h,color) {
+
+    ctx.fillStyle = color;
+
+    ctx.fillRect(
+        Math.floor(x),
+        Math.floor(y),
+        w,h
+    );
+}
+
+function drawDungeon() {
+
+    for (let y = 0; y < ROWS; y++) {
+
+        for (let x = 0; x < COLS; x++) {
+
+            const px = x*TILE;
+            const py = y*TILE;
+
+            const tile = world[y][x];
+
+            rect(
+                px,py,TILE,TILE,
+                (x+y)%2 ? "#373743" : "#30303b"
+            );
+
+            ctx.strokeStyle = "#272730";
+
+            ctx.strokeRect(px,py,TILE,TILE);
+
+            if (tile === "wall") {
+
+                rect(px,py,48,48,"#171720");
+                rect(px+2,py+2,44,38,"#555565");
+                rect(px+4,py+4,40,5,"#747485");
+                rect(px+2,py+21,44,3,"#30303d");
+                rect(px+23,py+2,3,19,"#30303d");
+                rect(px+12,py+24,3,16,"#30303d");
+            }
+
+            if (tile === "lava") {
+
+                rect(px+2,py+2,44,44,"#ad321b");
+
+                const wave = Math.sin(frame*.08+x+y)*5;
+
+                rect(px+6,py+12+wave,30,7,"#ff8a24");
+                rect(px+15,py+30-wave,25,5,"#ffd13d");
+            }
+
+            if (tile === "spikes") {
+
+                rect(px+4,py+4,40,40,"#202029");
+
+                for (let i = 0; i < 3; i++) {
+
+                    for (let j = 0; j < 3; j++) {
+
+                        const sx = px+10+i*13;
+                        const sy = py+10+j*13;
+
+                        if (frame%120 < 60) {
+
+                            ctx.fillStyle = "#bbc5ce";
+
+                            ctx.beginPath();
+                            ctx.moveTo(sx-4,sy+5);
+                            ctx.lineTo(sx,sy-6);
+                            ctx.lineTo(sx+4,sy+5);
+                            ctx.fill();
+
+                        } else {
+
+                            rect(sx-3,sy-3,6,6,"#111119");
+                        }
+                    }
+                }
+            }
+
+            if (tile === "exit") {
+
+                rect(px+5,py+2,38,44,"#997337");
+
+                rect(
+                    px+10,py+7,28,37,
+                    hasKey ? "#e7c95b" : "#5c402b"
+                );
+
+                rect(px+30,py+24,5,5,"#ffe9a1");
+            }
+        }
+    }
+}
+
+function drawChest(c) {
+
+    rect(c.x-18,c.y-10,36,25,"#694321");
+    rect(c.x-16,c.y-8,32,20,"#ad7538");
+
+    if (!c.opened) {
+
+        rect(c.x-18,c.y-13,36,10,"#c08b45");
+        rect(c.x-13,c.y-13,4,28,"#e3ba4b");
+        rect(c.x+9,c.y-13,4,28,"#e3ba4b");
+        rect(c.x-4,c.y-2,8,8,"gold");
+
+    } else {
+
+        rect(c.x-16,c.y-12,32,12,"#241a16");
+        rect(c.x-18,c.y-20,36,7,"#9c6d35");
+    }
+}
+
+function drawRoman() {
+
+    if (hurtTimer > 0 && frame%10 < 5) return;
+
+    ctx.save();
+
+    ctx.translate(roman.x,roman.y);
+
+    ctx.scale(roman.direction,1);
+
+    const walk = roman.moving
+        ? Math.sin(frame*.25)*4
+        : 0;
+
+    // Shadow.
+    rect(-16,19,32,6,"#191921");
+
+    // Blue cape.
+    rect(-20,-7,12,31,"#193b96");
+    rect(-23,3,10,23,"#285acb");
+
+    // Boots and legs.
+    rect(-11,9,9,16+walk,"#697381");
+    rect(3,9,9,16-walk,"#87929f");
+
+    // Armor.
+    rect(-14,-10,28,25,"#778491");
+    rect(-10,-10,20,21,"#bdc9d4");
+    rect(-8,-7,16,4,"#e4eaf0");
+
+    // Belt.
+    rect(-14,8,28,5,"#523e2c");
+    rect(-3,7,6,7,"#e3b943");
+
+    // Helmet.
+    rect(-14,-28,28,22,"#8795a5");
+    rect(-10,-33,20,27,"#b9c7d4");
+    rect(-9,-30,5,15,"#e5edf4");
+
+    // Helmet visor.
+    rect(-11,-20,24,7,"#20252e");
+    rect(2,-19,8,3,"#6bcaff");
+
+    // Blue plume.
+    rect(-4,-40,8,9,"#3468db");
+    rect(-13,-43,17,6,"#4a82ff");
+
+    // Shield.
+    rect(-22,-7,12,22,"#b5c3d0");
+    rect(-19,-4,6,16,"#315cbb");
+    rect(-17,0,2,9,"gold");
+
+    // Sword.
+    ctx.save();
+
+    ctx.translate(15,2);
+
+    ctx.rotate(
+        attackAnimation > 0
+        ? -1.8 + (12-attackAnimation)*.25
+        : .4
+    );
+
+    const swordColors = [
+        "#c9d2dc",
+        "#e4e9f1",
+        "#b9e8ff",
+        "#75e6ff",
+        "#ff8638",
+        "#ba7bff",
+        "#ffdf55"
+    ];
+
+    rect(-3,-30,6,29,
+        swordColors[Math.min(swordLevel-1,6)]
+    );
+
+    rect(-9,-4,18,5,"#d5aa44");
+    rect(-3,1,6,10,"#765030");
+
+    ctx.restore();
+
+    ctx.restore();
+
+    if (attackAnimation > 0) {
+
+        ctx.strokeStyle = "rgba(255,240,170,.65)";
+        ctx.lineWidth = 5;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            roman.x,
+            roman.y,
+            55,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+    }
+
+    if (dodgeTimer > 0) {
+
+        ctx.strokeStyle = "#6aaaff";
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+        ctx.arc(roman.x,roman.y,28,0,Math.PI*2);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 12px monospace";
+    ctx.textAlign = "center";
+
+    ctx.fillText("ROMAN",roman.x,roman.y+40);
+}
+
+function drawEnemy(e) {
+
+    ctx.save();
+
+    ctx.translate(e.x,e.y);
+
+    const bob = Math.sin(frame*.08+e.x)*3;
+
+    ctx.translate(0,bob);
+
+    if (e.boss) {
+
+        const colors = {
+            "Skeleton King":"#c9c7b6",
+            "Lava Golem":"#b84724",
+            "Shadow Knight":"#7543a8",
+            "Dungeon King":"#952d43"
+        };
+
+        const color = e.flash > 0
+            ? "white"
+            : colors[e.type];
+
+        rect(-35,-30,70,65,color);
+        rect(-25,-42,50,30,color);
+
+        rect(-48,-15,14,40,"#55505d");
+        rect(34,-15,14,40,"#55505d");
+
+        rect(-23,35,17,18,"#33333c");
+        rect(6,35,17,18,"#33333c");
+
+        rect(-19,-25,12,12,"#22222a");
+        rect(7,-25,12,12,"#22222a");
+
+        rect(-16,-23,6,6,"#ff3333");
+        rect(10,-23,6,6,"#ff3333");
+
+        rect(-14,5,28,7,"#22222a");
+
+        // Boss crown.
+        rect(-24,-51,48,10,"#d8a42f");
+
+        for (let i = 0; i < 3; i++) {
+
+            rect(-24+i*18,-61,12,14,"gold");
+        }
+
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.font = "bold 14px monospace";
+
+        ctx.fillText(e.type,0,-76);
+
+        rect(-45,-70,90,7,"#4b2028");
+        rect(-45,-70,90*e.hp/e.maxHP,7,"#e94343");
+
+    } else if (e.type === "slime") {
+
+        const color = e.flash > 0
+            ? "white"
+            : "#58bd59";
+
+        rect(-17,-8,34,23,color);
+        rect(-11,-16,22,30,color);
+
+        rect(-8,-5,5,7,"#17321c");
+        rect(4,-5,5,7,"#17321c");
+
+    } else {
+
+        const color = e.flash > 0
+            ? "white"
+            : "#d7d6c5";
+
+        rect(-11,-22,22,20,color);
+        rect(-8,-3,16,21,color);
+
+        rect(-15,0,5,17,color);
+        rect(10,0,5,17,color);
+
+        rect(-8,17,5,12,color);
+        rect(3,17,5,12,color);
+
+        rect(-7,-16,5,6,"#222");
+        rect(3,-16,5,6,"#222");
+
+        rect(-6,3,12,3,"#555");
+        rect(-6,10,12,3,"#555");
+    }
+
+    if (!e.boss) {
+
+        rect(-15,-31,30,5,"#49242c");
+        rect(-15,-31,30*e.hp/e.maxHP,5,"#65dc60");
+    }
+
+    ctx.restore();
+}
+
+function draw() {
+
+    drawDungeon();
+
+    for (const chest of chests) drawChest(chest);
+
+    for (const e of enemies) drawEnemy(e);
+
+    for (const p of projectiles) {
+
+        ctx.shadowColor = "#ff5522";
+        ctx.shadowBlur = 12;
+
+        rect(p.x-6,p.y-6,12,12,"#ff7733");
+        rect(p.x-3,p.y-3,6,6,"#fff099");
+
+        ctx.shadowBlur = 0;
+    }
+
+    drawRoman();
+
+    for (const p of particles) {
+
+        ctx.globalAlpha = p.life/30;
+
+        rect(p.x,p.y,4,4,p.color);
+    }
+
+    ctx.globalAlpha = 1;
+
+    if (shopping || gameOver || victory) {
+
+        rect(0,0,960,576,"#000b");
+
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 40px monospace";
+
+        ctx.fillStyle = gameOver
+            ? "#ff6666"
+            : "gold";
+
+        ctx.fillText(
+            victory
+            ? "DUNGEON CONQUERED!"
+            : gameOver
+            ? "ROMAN HAS FALLEN"
+            : "FLOOR CLEARED!",
+            480,250
+        );
+
+        ctx.font = "20px monospace";
+        ctx.fillStyle = "white";
+
+        ctx.fillText(
+            victory
+            ? "SECRET PORTAL CODE: BOSS2"
+            : gameOver
+            ? "Reached floor " + floor
+            : "Visit the merchant below.",
+            480,300
+        );
+    }
+}
+
+function saveGame(manual=false) {
+
+    try {
+
+        localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify({
+                floor,
+                coins,
+                potions,
+                swordLevel,
+                armorLevel,
+                roman,
+                world,
+                enemies,
+                chests,
+                hasKey,
+                shopping,
+                gameOver,
+                victory
+            })
+        );
+
+        if (manual) message("Dungeon progress saved!");
+
+    } catch {
+
+        message("Unable to save game.");
+    }
+}
+
+function loadGame() {
+
+    try {
+
+        const data = JSON.parse(
+            localStorage.getItem(SAVE_KEY)
+        );
+
+        if (!data || !Array.isArray(data.world)) {
+            return false;
+        }
+
+        floor = data.floor;
+        coins = data.coins;
+        potions = data.potions;
+        swordLevel = data.swordLevel;
+        armorLevel = data.armorLevel;
+
+        Object.assign(roman,data.roman);
+
+        world = data.world;
+        enemies = data.enemies;
+        chests = data.chests;
+
+        hasKey = !!data.hasKey;
+        shopping = !!data.shopping;
+        gameOver = !!data.gameOver;
+        victory = !!data.victory;
+
+        document.getElementById("shop").style.display =
+            shopping ? "block" : "none";
+
+        message("Welcome back, Roman!");
+
+        return true;
+
+    } catch {
+
+        return false;
+    }
+}
+
+function resetGame() {
+
+    if (!confirm("Reset Roman's entire adventure?")) return;
+
+    localStorage.removeItem(SAVE_KEY);
+
+    location.reload();
+}
+
+let previousTime = performance.now();
+let accumulator = 0;
+
+function loop(now) {
+
+    accumulator += Math.min(now-previousTime,100);
+
+    previousTime = now;
+
+    while (accumulator >= 1000/60) {
+
+        update();
+
+        accumulator -= 1000/60;
+    }
+
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+if (!loadGame()) generateDungeon();
+
+updateHUD();
+
+setInterval(() => saveGame(),5000);
+
+window.addEventListener("pagehide",() => saveGame());
+
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
